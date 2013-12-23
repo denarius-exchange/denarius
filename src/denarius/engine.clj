@@ -1,14 +1,14 @@
 (ns denarius.engine)
 
-(def book {:bid (ref (sorted-map))  :ask (ref (sorted-map))} )
+(def order-book {:bid (ref (sorted-map))  :ask (ref (sorted-map))} )
 
 
-(defrecord Order-Complete [broker-id order-id side size price])
+(defrecord Order-Complete [order-id broker-id side size price])
 
-(defn create-order [broker-id order-id side size price]
-  (->Order-Complete broker-id order-id side size price ))
+(defn create-order [order-id broker-id side size price]
+  (->Order-Complete order-id broker-id side size price ))
 
-(defn insert-order [^Order-Complete order]
+(defn insert-order [book ^Order-Complete order]
   (let [side (:side order)
         price (:price order)
         side-ref (side book)
