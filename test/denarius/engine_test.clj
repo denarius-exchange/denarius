@@ -71,10 +71,17 @@
           broker-id  1
           price      10
           size       1
+          result-bid (ref nil)
+          result-ask (ref nil)
+          key        :fulfill
+          watcher    (fn [k r o n]
+                       (let [result-ref (if (= (:side n) :bid) result-bid result-ask)] 
+                         (dosync (ref-set result-ref
+                                          (list (:order-id n) (:size n)) ))))
           order-bid-1 (create-order order-id-1 broker-id :bid size price)
           order-bid-2 (create-order order-id-2 broker-id :bid (* 2 size) price)
           order-ask-1 (create-order order-id-3 broker-id :ask size price)
-          asset-name "EURUSD"]
+          asset-name  "EURUSD"]
       (testing "Matching order (existing is bid, incoming is ask): Equal size"
                (let [order-book (create-order-book asset-name)]
                  (insert-order order-book order-bid-1)
@@ -85,18 +92,18 @@
                  (insert-order order-book order-ask-1)
                  (match-order order-book order-bid-1)
                  (is (= 0 (market-depth order-book :ask price ))) ))
-      (testing "Matching order (existing is ask, incoming is bid): 1 to 2"
+      (testing "Matching order (existing is ask, incoming is bid): Partial fulfilling, 1 to 2"
                (let [order-book (create-order-book asset-name)]
                  (insert-order order-book order-ask-1)
                  (match-order order-book order-bid-2)
                  (is (= 0 (market-depth order-book :ask price )))
-                 (is (= 1 (market-depth order-book :bid price ))) ))
-      
-      (testing "Matching order (existing is bid, incoming is ask): 2 to 1"
+                 (is (= 1 (market-depth order-book :bid price )))
+                 (is (= (list order-id-2 1) @result-bid)) ))
+      (testing "Matching order (existing is bid, incoming is ask): Partial fulfilling, 2 to 1"
                (let [order-book (create-order-book asset-name)]
                  (insert-order order-book order-bid-2)
                  (match-order order-book order-ask-1)
                  (is (= 0 (market-depth order-book :ask price )))
-                 (is (= 1 (market-depth order-book :bid price ))) ))))
-
+                 (is (= 1 (market-depth order-book :bid price )))
+                 (is (= (list order-id-2 1) @result-bid)) ))))
 
