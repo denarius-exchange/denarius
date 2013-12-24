@@ -1,24 +1,56 @@
 (ns denarius.engine)
 
-(def order-book {:bid (ref (sorted-map))  :ask (ref (sorted-map))} )
+; This is the order book record
+(defrecord Book [bid ask])
 
+(defn create-order-book [asset-name]
+   (with-meta 
+     (->Book (ref (sorted-map)) (ref (sorted-map)))
+     {:asset-name asset-name} ))
 
-(defrecord Order-Complete [order-id broker-id side size price])
+(defn market-depth
+  ([order-book side]
+    (map (fn [level]
+           [(key level) (count @(val level))])
+         @(side order-book)))
+  ([order-book side price]
+    (let [side-ref (side order-book)
+          level-ref (@side-ref price)]
+    (if level-ref
+      (count @(@(side order-book) price))
+      0 ))))
+
+(defrecord Order [order-id broker-id side size price])
 
 (defn create-order [order-id broker-id side size price]
-  (->Order-Complete order-id broker-id side size price ))
+  (->Order order-id broker-id side size price ))
 
-(defn insert-order [book ^Order-Complete order]
+(defn insert-order [book ^Order order]
   (let [side (:side order)
         price (:price order)
         side-ref (side book)
         level-ref (@side-ref price)]
     (if level-ref
       (do
-        (dosync
-          (alter level-ref #(conj % order))))
+        (dosync (alter level-ref #(conj % order))))
       (do
         (dosync
           (alter side-ref #(assoc % price (ref ()) ))
           (alter (@side-ref price) #(conj % order)))
         ))))
+
+
+(defn remove-order [book ^Order order]
+    (let [order-id (:order-id order)
+          side (:side order)
+          price (:price order)
+          side-ref (side book)
+          level-ref (@side-ref price)
+          pred #(= (:order-id % order-id))]
+      (if level-ref
+        (do
+          (dosync (alter level-ref #(remove pred %))) ))))
+
+
+  
+  
