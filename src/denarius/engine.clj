@@ -25,7 +25,7 @@
 (defn create-order [order-id broker-id side size price]
   (->Order order-id broker-id side size price ))
 
-(defn insert-order [book ^Order order]
+(defn insert-order [^Book book ^Order order]
   (let [side (:side order)
         price (:price order)
         side-ref (side book)
@@ -40,7 +40,7 @@
         ))))
 
 
-(defn remove-order [book ^Order order]
+(defn remove-order [^Book book ^Order order]
     (let [order-id (:order-id order)
           side (:side order)
           price (:price order)
@@ -52,7 +52,7 @@
           (dosync (alter level-ref #(remove pred %))) ))))
 
 
-(defn match-order [book ^Order order]
+(defn match-order [^Book book ^Order order]
   (let [price         (:price order)
         order-side    (:side order)
         matching-side (if (= order-side :bid) :ask :bid)
@@ -63,5 +63,3 @@
     (loop []
       (if-not (empty? level-ref)
         (insert-order order) ))))
-  
-  
