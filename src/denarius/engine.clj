@@ -52,5 +52,16 @@
           (dosync (alter level-ref #(remove pred %))) ))))
 
 
+(defn match-order [book ^Order order]
+  (let [price         (:price order)
+        order-side    (:side order)
+        matching-side (if (= order-side :bid) :ask :bid)
+        side-ref      (matching-side book)
+        level-ref     (@side-ref price)]
+    (if-not level-ref
+      (insert-order order))
+    (loop []
+      (if-not (empty? level-ref)
+        (insert-order order) ))))
   
   
