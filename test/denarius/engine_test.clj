@@ -15,10 +15,11 @@
   (testing "Create order"
            (let [order-id   1111
                  broker-id  1
+                 type       :limit
                  price      10
                  size       1
                  side       :bid
-                 order      (create-order order-id broker-id side size price)]
+                 order      (create-order order-id broker-id type side size price)]
              (is (= order-id (:order-id order)))
              (is (= broker-id (:broker-id order)))
              (is (= side (:side order)))
@@ -29,10 +30,11 @@
 (deftest test-insert-into-book-and-delete
   (let [order-id   1111
         broker-id  1
+        type       :limit
         price      10
         size       1
         side       :bid
-        order      (create-order-ref order-id broker-id side size price nil nil)
+        order      (create-order-ref order-id broker-id type side size price nil nil)
         asset-name "EURUSD"
         order-book (create-order-book asset-name)]
     (testing "Insert order into book"
@@ -46,11 +48,12 @@
 (deftest test-market-depth
   (let [price-10   10
         price-20   20
+        type       :limit
         size       1
         broker-id  1
-        order-10-1 (create-order-ref 1 broker-id :bid size price-10 nil nil)
-        order-10-2 (create-order-ref 2 broker-id :bid size price-10 nil nil)
-        order-20-1 (create-order-ref 3 broker-id :bid size price-20 nil nil)
+        order-10-1 (create-order-ref 1 broker-id type :bid size price-10 nil nil)
+        order-10-2 (create-order-ref 2 broker-id type :bid size price-10 nil nil)
+        order-20-1 (create-order-ref 3 broker-id type :bid size price-20 nil nil)
         asset-name "EURUSD"
         order-book (create-order-book asset-name)]
     (insert-order order-book order-10-1)
@@ -70,6 +73,7 @@
           order-id-3 3
           order-id-4 4
           broker-id  1
+          type       :limit
           price      10
           size       1
           result-bid (ref nil)
@@ -85,24 +89,24 @@
           asset-name "EURUSD"]
       (testing "Matching order (existing is bid, incoming is ask): Equal size"
                (let [order-book (create-order-book asset-name)
-                     order-bid-1 (create-order-ref order-id-1 broker-id :bid size price key watcher)
-                     order-ask-1 (create-order-ref order-id-3 broker-id :ask size price key watcher)]
+                     order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price key watcher)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-bid-1)
                  (match-order order-book order-ask-1 cross)
                  (is (= 0 (market-depth order-book :bid price )))
                  (is (= [price size])) ))
       (testing "Matching order (existing is ask, incoming is bid): Equal size"
                (let [order-book (create-order-book asset-name)
-                     order-bid-1 (create-order-ref order-id-1 broker-id :bid size price key watcher)
-                     order-ask-1 (create-order-ref order-id-3 broker-id :ask size price key watcher)]
+                     order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price key watcher)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-ask-1)
                  (match-order order-book order-bid-1 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= [price size])) ))
       (testing "Matching order (existing is ask, incoming is bid): Partial fulfilling, 1 to 2"
                (let [order-book (create-order-book asset-name)
-                     order-bid-2 (create-order-ref order-id-2 broker-id :bid (* 2 size) price key watcher)
-                     order-ask-1 (create-order-ref order-id-3 broker-id :ask size price key watcher)]
+                     order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-ask-1)
                  (match-order order-book order-bid-2 cross)
                  (is (= 0 (market-depth order-book :ask price )))
@@ -111,8 +115,8 @@
                  (is (= [price size])) ))
       (testing "Matching order (existing is bid, incoming is ask): Partial fulfilling, 2 to 1"
                (let [order-book (create-order-book asset-name)
-                     order-bid-2 (create-order-ref order-id-2 broker-id :bid (* 2 size) price key watcher)
-                     order-ask-1 (create-order-ref order-id-3 broker-id :ask size price key watcher)]
+                     order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-bid-2)
                  (match-order order-book order-ask-1 cross)
                  (is (= 0 (market-depth order-book :ask price )))
@@ -121,16 +125,16 @@
                  (is (= [price size])) ))
       (testing "Matching order (existing bid, incoming cheaper ask; Partial fulfilling, 2 to 1"
                (let [order-book (create-order-book asset-name)
-                     order-bid-2 (create-order-ref order-id-2 broker-id :bid (* 2 size) price key watcher)
-                     order-ask-2 (create-order-ref order-id-4 broker-id :ask size (- price 1) key watcher)]
+                     order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
+                     order-ask-2 (create-order-ref order-id-4 broker-id type :ask size (- price 1) key watcher)]
                  (insert-order order-book order-bid-2)
                  (match-order order-book order-ask-2 cross)
                  (is (= 1 (market-depth order-book :bid price )))
                  (is (= [(- price 1) size])) ))
       (testing "Matching order (existing cheaper ask, incoming bid; Partial fulfilling, 1 to 2"
                (let [order-book (create-order-book asset-name)
-                     order-bid-2 (create-order-ref order-id-2 broker-id :bid (* 2 size) price key watcher)
-                     order-ask-2 (create-order-ref order-id-4 broker-id :ask size (- price 1) key watcher)]
+                     order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
+                     order-ask-2 (create-order-ref order-id-4 broker-id type :ask size (- price 1) key watcher)]
                  (insert-order order-book order-ask-2)
                  (match-order order-book order-bid-2 cross)
                  (is (= 1 (market-depth order-book :bid price )))
