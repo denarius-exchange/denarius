@@ -100,6 +100,7 @@
                      order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price key watcher)
                      order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-ask-1)
+                 (insert-order order-book order-bid-1)
                  (match-order order-book order-bid-1 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= [price size])) ))
@@ -108,6 +109,7 @@
                      order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
                      order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-ask-1)
+                 (insert-order order-book order-bid-2)
                  (match-order order-book order-bid-2 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= 1 (market-depth order-book :bid price )))
@@ -118,6 +120,7 @@
                      order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
                      order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price key watcher)]
                  (insert-order order-book order-bid-2)
+                 (insert-order order-book order-ask-1)
                  (match-order order-book order-ask-1 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= 1 (market-depth order-book :bid price )))
@@ -128,6 +131,7 @@
                      order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
                      order-ask-2 (create-order-ref order-id-4 broker-id type :ask size (- price 1) key watcher)]
                  (insert-order order-book order-bid-2)
+                 (insert-order order-book order-ask-2)
                  (match-order order-book order-ask-2 cross)
                  (is (= 1 (market-depth order-book :bid price )))
                  (is (= [(- price 1) size])) ))
@@ -136,6 +140,7 @@
                      order-bid-2 (create-order-ref order-id-2 broker-id type :bid (* 2 size) price key watcher)
                      order-ask-2 (create-order-ref order-id-4 broker-id type :ask size (- price 1) key watcher)]
                  (insert-order order-book order-ask-2)
+                 (insert-order order-book order-bid-2)
                  (match-order order-book order-bid-2 cross)
                  (is (= 1 (market-depth order-book :bid price )))
                  (is (= [(- price 1) size])) ))))
