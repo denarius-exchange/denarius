@@ -1,12 +1,14 @@
 (ns denarius.engine)
 
 ; Order book record
-(defrecord Book [bid ask])
+(defrecord Book [bid ask
+                 market-bid market-ask])
 
 (defn create-order-book [^String asset-name]
   "Creates an order book instance with the asset name as metadata"
   (with-meta 
-    (->Book (ref (sorted-map)) (ref (sorted-map)))
+    (->Book (ref (sorted-map)) (ref (sorted-map))
+            (ref (sorted-map)) (ref (sorted-map)))
     {:asset-name asset-name} ))
 
 (defn book-asset [^Book book]
@@ -37,33 +39,46 @@
    price information"
   (->Order order-id broker-id type side size price ))
 
-(defn create-order-ref [order-id broker-id type side size price key watcher]
+(defn create-order-ref [order-id broker-id
+                        type side size price key watcher]
   (let [order (create-order order-id broker-id type side size price)]
     (add-watch (ref order) key watcher )))
 
-(defn insert-order
-  ([^Book book ^Order order-ref]
-    "Insert an order into the book specified as argument"
-    (let [side      (:side @order-ref)
-          price     (:price @order-ref)
-          side-ref  (side book)
-          level-ref (@side-ref price)]
-      (if level-ref
-        (do
-          (dosync (alter level-ref #(conj % order-ref ))))
-        (do
-          (dosync
-            (alter side-ref #(assoc % price (ref ()) ))
-            (alter (@side-ref price) #(conj % order-ref)))
-          ))
-      order-ref ))
-  ([^Book book ^Order order-ref key watcher]
-    "Insert an order into the book specified as argument with
-     watcher function attached to retrieve changes in the reference"
-    (add-watch order-ref key watcher) ))
+(def order-type-dispatch (fn [_ ^Order order-ref] (:type @order-ref)))
+
+(defn order-market-side [book side]
+  (if (= side :ask)
+    (:market-ask book)
+    (:market-bid book) ))
+
+(defmulti insert-order order-type-dispatch)
+
+(defmethod insert-order :limit [^Book book ^Order order-ref]
+  "Insert an order into the book specified as argument"
+  (let [side      (:side @order-ref)
+        price     (:price @order-ref)
+        side-ref  (side book)
+        level-ref (@side-ref price)]
+    (if level-ref
+      (do
+        (dosync (alter level-ref #(conj % order-ref ))))
+      (do
+        (dosync
+          (alter side-ref #(assoc % price (ref ()) ))
+          (alter (@side-ref price) #(conj % order-ref)))
+        ))
+    order-ref ))
+
+(defmethod insert-order :market [^Book book ^Order order-ref]
+  (let [side      (:side @order-ref)
+        price     (:price @order-ref)
+        side-ref  (order-market-side book side)]
+    (alter side-ref #(conj % order-ref)) ))
 
 
-(defn remove-order [^Book book ^Order order-ref]
+(defmulti remove-order order-type-dispatch)
+
+(defmethod remove-order :limit [^Book book ^Order order-ref]
   "Remove an order from the book specified as argument"
   (let [order-id  (:order-id @order-ref)
         side      (:side @order-ref)
@@ -74,6 +89,14 @@
     (if level-ref
       (do
         (dosync (alter level-ref #(remove pred %))) true ))))
+
+(defmethod remove-order :market [^Book book ^Order order-ref]
+  "Remove an order from the book specified as argument"
+  (let [order-id  (:order-id @order-ref)
+        side      (:side @order-ref)
+        side-ref  (order-market-side book side)
+        pred      #(= (:order-id @%) order-id)]
+        (dosync (alter side-ref #(remove pred %))) true ))
 
 
 (defn best-price
