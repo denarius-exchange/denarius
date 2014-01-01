@@ -115,17 +115,17 @@
         side-ref      (matching-side book)]
     (dosync
       (loop [level-ref (best-price book matching-side price)]
-        (if-not level-ref
-          (insert-order book order-ref)
-          (if (empty? @level-ref)
-            (insert-order book order-ref)
+        (if level-ref
+          (if-not (empty? @level-ref)
             (let [first-available-ref (last @level-ref)
                   first-available     @(last @level-ref)
                   available-size      (:size first-available)
                   size                (:size @order-ref)]
               (cross first-available-ref order-ref (min available-size size) price)
               (if (> available-size size)
-                (alter first-available-ref update-in [:size] - size)
+                (do
+                  (alter first-available-ref update-in [:size] - size)
+                  (remove-order book order-ref) )
                 (do
                   (alter order-ref update-in [:size] - available-size)
                   (alter first-available-ref update-in [:size] - available-size)
