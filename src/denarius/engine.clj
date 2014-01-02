@@ -8,7 +8,7 @@
   "Creates an order book instance with the asset name as metadata"
   (with-meta 
     (->Book (ref (sorted-map)) (ref (sorted-map))
-            (ref (sorted-map)) (ref (sorted-map)))
+            (ref (list)) (ref (list)))
     {:asset-name asset-name} ))
 
 (defn book-asset [^Book book]
@@ -44,7 +44,7 @@
   (let [order (create-order order-id broker-id type side size price)]
     (add-watch (ref order) key watcher )))
 
-(def order-type-dispatch (fn [_ ^Order order-ref] (:type @order-ref)))
+(def order-type-dispatch (fn [_ ^Order order-ref & more] (:type @order-ref)))
 
 (defn order-market-side [book side]
   (if (= side :ask)
@@ -59,21 +59,18 @@
         price     (:price @order-ref)
         side-ref  (side book)
         level-ref (@side-ref price)]
-    (if level-ref
-      (do
-        (dosync (alter level-ref #(conj % order-ref ))))
-      (do
-        (dosync
+    (dosync 
+      (if level-ref
+        (alter level-ref #(conj % order-ref ))
+        (do
           (alter side-ref #(assoc % price (ref ()) ))
-          (alter (@side-ref price) #(conj % order-ref)))
-        ))
-    order-ref ))
+          (alter (@side-ref price) #(conj % order-ref)) )))))
 
 (defmethod insert-order :market [^Book book ^Order order-ref]
-  (let [side      (:side @order-ref)
-        price     (:price @order-ref)
-        side-ref  (order-market-side book side)]
-    (alter side-ref #(conj % order-ref)) ))
+  (let [side     (:side @order-ref)
+        side-ref (order-market-side book side)]
+    (dosync
+        (alter side-ref #(conj % order-ref)) )))
 
 
 (defmulti remove-order order-type-dispatch)
@@ -99,36 +96,55 @@
         (dosync (alter side-ref #(remove pred %))) true ))
 
 
-(defn best-price
+(defn best-price-level-ref
   ([book side]
     "Compute the best price available for an order of the side
      specified as argument. This searches the opposite site for
      the best price available."
-    (let [side-ref (side book)
-          minmax   (if (= side :ask) min max) 
-          prices   (keys @side-ref)]
+    (let [side-ref         (side book)
+          minmax           (if (= side :ask) min max) 
+          cmp              (if (= side :ask) < >) 
+          prices           (sort cmp (keys @side-ref))
+          num-lvls-minus-1 (dec (count prices))]
       (if (empty? prices)
         nil
-        (@side-ref (apply minmax prices)) )))
+        (loop [index 0]
+          (let [current-level (nth prices index)
+                level-ref (@side-ref current-level)]
+            (if-not (empty? @level-ref)
+              level-ref
+              (if (= index num-lvls-minus-1)
+                nil
+                (recur (inc index)) )))))))
   ([book side limit]
     "Compute the best price available for an order of the side
      specified as argument. This searches the opposite site for
-     the best price available that is better (in the sense of
-     cheaper for bid orders and more expensive for ask orders)
+     the best price available that is better in the sense of
+     cheaper for bid orders and more expensive for ask orders
      that a given limit."
-    (let [side-ref (side book)
-          minmax   (if (= side :ask) min max)
-          op       (if (= side :ask) >= <=)
-          prices   (keys @side-ref)]
+    (let [side-ref         (side book)
+          minmax           (if (= side :ask) min max)
+          op               (if (= side :ask) >= <=)
+          cmp              (if (= side :ask) < >) 
+          prices           (sort cmp (keys @side-ref))
+          num-lvls-minus-1 (dec (count prices))]
       (if (empty? prices)
         nil
-        (let [best (apply minmax prices)]
-          (if (op limit best)
-            (@side-ref best)
-            nil ))))))
+        (loop [index 0]
+          (let [current-level (nth prices index)
+                level-ref (@side-ref current-level)]
+            (if-not (op limit current-level)
+              nil
+              (if-not (empty? @level-ref)
+                level-ref
+                (if (= index num-lvls-minus-1)
+                  nil
+                  (recur (inc index)) )))))))))
+  
 
+(defmulti match-order order-type-dispatch)
 
-(defn match-order [^Book book ^Order order-ref cross]
+(defmethod match-order :limit [^Book book ^Order order-ref cross]
   "Match order. If no order-ref exists in the book, insert the order-ref."
   (let [order-id      (:order-id @order-ref)
         broker-id     (:broker-id @order-ref)
@@ -137,11 +153,11 @@
         matching-side (if (= order-side :bid) :ask :bid)
         side-ref      (matching-side book)]
     (dosync
-      (loop [level-ref (best-price book matching-side price)]
+      (loop [level-ref (best-price-level-ref book matching-side price)]
         (if level-ref
           (if-not (empty? @level-ref)
             (let [first-available-ref (last @level-ref)
-                  first-available     @(last @level-ref)
+                  first-available     @first-available-ref
                   available-size      (:size first-available)
                   size                (:size @order-ref)]
               (cross first-available-ref order-ref (min available-size size) price)
@@ -153,5 +169,41 @@
                   (alter order-ref update-in [:size] - available-size)
                   (alter first-available-ref update-in [:size] - available-size)
                   (remove-order book first-available-ref)
-                  (if-not (= size available-size)
-                    (recur (best-price book matching-side price) )))))))))))
+                  (if (= size available-size)
+                    (remove-order book order-ref)
+                    (recur (best-price-level-ref book matching-side price) )))))))))))
+
+(defmethod match-order :market [^Book book ^Order order-ref cross]
+  (let [order-id      (:order-id @order-ref)
+        broker-id     (:broker-id @order-ref)
+        order-side    (:side @order-ref)
+        matching-side (if (= order-side :bid) :ask :bid)
+        mkt-side      (order-market-side book order-side)
+        mkt-mtch-side (if (= matching-side :bid) :market-bid :market-ask)
+        mkt-mtch-ref  (mkt-mtch-side book)]
+    (dosync
+      (loop [best-lvl-ref (best-price-level-ref book matching-side)
+             level-ref  (if-not (empty? @mkt-mtch-ref)
+                          mkt-mtch-ref
+                          best-lvl-ref)]
+        (if (and level-ref best-lvl-ref)
+          (let [first-available-ref (last @level-ref)
+                first-available     @first-available-ref
+                available-size      (:size first-available)
+                size                (:size @order-ref)]
+            (cross first-available-ref order-ref (min available-size size) 
+                   (:price @best-lvl-ref))
+            (if (> available-size size)
+              (do
+                (alter first-available-ref update-in [:size] - size)
+                (remove-order book order-ref) )
+              (do
+                (alter order-ref update-in [:size] - available-size)
+                (alter first-available-ref update-in [:size] - available-size)
+                (remove-order book first-available-ref)
+                (if (= size available-size)
+                  (remove-order book order-ref)
+                  (recur (best-price-level-ref book matching-side)
+                         (if-not (empty? @mkt-mtch-ref)
+                           mkt-mtch-ref
+                           best-lvl-ref ) ))))))))))
