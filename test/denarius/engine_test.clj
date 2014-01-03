@@ -243,3 +243,74 @@
                  (is (= 0 (count @(:market-bid order-book ))))
                  (is (= 1 (market-depth order-book :bid price))) ))
       ))
+
+
+
+(deftest test-match-once
+    (let [order-id-1 1
+          order-id-2 2
+          order-id-3 3
+          order-id-4 4
+          broker-id  1
+          type       :market
+          type-lmt   :limit
+          price      10
+          size       1
+          result-bid (ref nil)
+          result-ask (ref nil)
+          last-price (ref nil)
+          cross      (fn [order-in-book order-incoming size price]
+                       (dosync (ref-set last-price [price size])))
+          asset-name "EURUSD"]
+      (testing "If no book orders exist, stack market orders until we have a price"
+               (let [order-book  (create-order-book asset-name)
+                     order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price nil nil)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price nil nil)]
+                 (insert-order order-book order-bid-1)
+                 (insert-order order-book order-ask-1)
+                 (match-once order-book (fn [a b c d] nil))
+                 (is (= 1 (count @(:market-bid order-book ))))
+                 (is (= 1 (count @(:market-ask order-book )))) ))
+      (testing "Match two limit orders"
+               (let [order-book  (create-order-book asset-name)
+                     order-bid-1 (create-order-ref order-id-1 broker-id type-lmt :bid size price nil nil)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type-lmt :ask size price nil nil)]
+                 (insert-order order-book order-bid-1)
+                 (insert-order order-book order-ask-1)
+                 (match-once order-book (fn [a b c d] nil))
+                 (is (= 0 (market-depth order-book :bid price)))
+                 (is (= 0 (market-depth order-book :ask price))) ))
+      (testing "Receive a market order, stack it and then match it with an incoming limit"
+               (let [order-book  (create-order-book asset-name)
+                     order-bid-1 (create-order-ref order-id-1 broker-id type-lmt :bid size price nil nil)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price nil nil)]
+                 (insert-order order-book order-bid-1)
+                 (insert-order order-book order-ask-1)
+                 (match-once order-book (fn [a b c d] nil))
+                 (is (= 0 (count @(:market-bid order-book ))))
+                 (is (= 0 (market-depth order-book :ask price))) ))
+      (testing "Receive two market orders, stack them until getting a limit order"
+               (let [order-book  (create-order-book asset-name)
+                     order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price nil nil)
+                     order-bid-2 (create-order-ref order-id-2 broker-id type-lmt :bid size price nil nil)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price nil nil)]
+                 (insert-order order-book order-bid-1)
+                 (insert-order order-book order-ask-1)
+                 (insert-order order-book order-bid-2)
+                 (match-once order-book (fn [a b c d] nil))
+                 (is (= 0 (count @(:market-bid order-book ))))
+                 (is (= 0 (count @(:market-ask order-book ))))
+                 (is (= 1 (market-depth order-book :bid price))) ))
+      (testing "Receive two market orders (one triple in size), stack them until getting a limit order. A market of size one survives"
+               (let [order-book  (create-order-book asset-name)
+                     order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price nil nil)
+                     order-bid-2 (create-order-ref order-id-2 broker-id type-lmt :bid (* 2 size) price nil nil)
+                     order-ask-1 (create-order-ref order-id-3 broker-id type :ask (* 4 size) price nil nil)]
+                 (insert-order order-book order-bid-1)
+                 (insert-order order-book order-ask-1)
+                 (insert-order order-book order-bid-2)
+                 (match-once order-book (fn [a b c d] nil))
+                 (is (= 0 (count @(:market-bid order-book ))))
+                 (is (= 1 (count @(:market-ask order-book ))))
+                 (is (= 0 (market-depth order-book :bid price))) ))
+      ))
