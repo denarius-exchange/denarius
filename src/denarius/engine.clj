@@ -207,3 +207,19 @@
                          (if-not (empty? @mkt-mtch-ref)
                            mkt-mtch-ref
                            best-lvl-ref ) ))))))))))
+
+(defn match-once [book cross]
+  (let [market-ask (:market-ask book)
+        market-bid (:market-bid book)
+        ask        (:ask book)
+        bid        (:bid book)]
+    (dosync
+      (let [order-ref (if-not (empty? @market-ask)
+                        (last @market-ask)
+                        (if-not (empty? @market-bid)
+                          (last @market-bid)
+                          (if (> (apply + (map second (market-depth book :ask))) 0)
+                            (last @(best-price-level-ref book :ask))
+                            nil)))]
+        (if order-ref
+          (match-order book order-ref cross) )))))
