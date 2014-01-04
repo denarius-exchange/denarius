@@ -15,9 +15,9 @@
   "Retrieves the order book's asset name"
   (:asset-name (meta book))) 
 
-(defn market-depth
+(defn count-orders
   "Retrieves the number of orders at the side indicated in the argument.
-   A list of [price-leel count] vectors is returned.
+   A list of [price-level count] vectors is returned.
    An additional parameter price indicates the specific price level to
    constrain the count."
   ([^Book order-book side]
@@ -30,6 +30,19 @@
       (if level-ref
         (count @(@(side order-book) price))
         0 ))))
+
+
+(defn market-depth
+  ([^Book order-book side]
+    (map (fn [level]
+           [(key level) (apply + (map (comp :size deref) @(val level)) )])
+         @(side order-book)) )
+  ([^Book order-book side price]
+    (let [side-ref (side order-book)
+          level-ref (@side-ref price)]
+      (if level-ref
+        (apply + (map (comp :size deref) @(@(side order-book) price)))
+        0 )) ))
 
 ; Record for order information
 (defrecord Order [order-id broker-id type side size price])
@@ -140,7 +153,22 @@
                 (if (= index num-lvls-minus-1)
                   nil
                   (recur (inc index)) )))))))))
-  
+
+
+(defn clear-book [book]
+  "Clears book"
+  (dosync
+    (let [ask     (:ask book)
+          bid     (:bid book)
+          mkt-ask (:market-ask book)
+          mkt-bid (:market-bid book)]
+      (doseq [price (keys @ask)]
+          (alter ask dissoc price) )
+      (doseq [price (keys @bid)]
+          (alter bid dissoc price) )
+      (ref-set mkt-ask {})
+      (ref-set mkt-bid {}) )))
+
 
 (defmulti match-order order-type-dispatch)
 
