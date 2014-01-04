@@ -77,17 +77,21 @@
         order-10-1 (create-order-ref 1 broker-id type :bid size price-10 nil nil)
         order-10-2 (create-order-ref 2 broker-id type :bid size price-10 nil nil)
         order-20-1 (create-order-ref 3 broker-id type :bid size price-20 nil nil)
+        order-20-2 (create-order-ref 3 broker-id type :bid (* 3 size) price-20 nil nil)
         asset-name "EURUSD"
         order-book (create-order-book asset-name)]
-    (insert-order order-book order-10-1)
-    (insert-order order-book order-10-2)
-    (insert-order order-book order-20-1)
-    (testing (str "Market Depth price" price-10)
-             (is (= 2 (market-depth order-book :bid price-10))))
-    (testing (str "Market Depth price" price-20)
-             (is (= 1 (market-depth order-book :bid price-20))))
-    (testing (str "Market Depth price all bids")
-             (is (= '([10 2] [20 1]) (market-depth order-book :bid)))) ))
+             (insert-order order-book order-10-1)
+             (insert-order order-book order-10-2)
+             (insert-order order-book order-20-1)
+             (testing (str "Market Depth price" price-10)
+                      (is (= 2 (market-depth order-book :bid price-10))))
+             (testing (str "Market Depth price" price-20)
+                      (is (= 1 (market-depth order-book :bid price-20))))
+             (testing (str "Market Depth price all bids")
+                      (is (= '([10 2] [20 1]) (market-depth order-book :bid))))
+             (insert-order order-book order-20-2)
+             (testing (str "Market Depth price" price-20)
+                      (is (= 4 (market-depth order-book :bid price-20))))))
 
 
 (deftest test-match-order-limit
