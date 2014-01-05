@@ -1,6 +1,7 @@
 (ns denarius.engine-test)
 
 (use 'clojure.test
+     'denarius.order
      'denarius.engine)
 
 

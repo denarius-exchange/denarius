@@ -1,4 +1,6 @@
-(ns denarius.engine)
+(ns denarius.engine
+  (:use denarius.order)
+  (:import [denarius.order Order]) )
 
 ; Order book record
 (defrecord Book [bid ask
@@ -44,18 +46,6 @@
         (apply + (map (comp :size deref) @(@(side order-book) price)))
         0 )) ))
 
-; Record for order information
-(defrecord Order [order-id broker-id type side size price])
-
-(defn create-order [order-id broker-id type side size price]
-  "Create a new order with order-id, customer id (broker), side, size and
-   price information"
-  (->Order order-id broker-id type side size price ))
-
-(defn create-order-ref [order-id broker-id
-                        type side size price key watcher]
-  (let [order (create-order order-id broker-id type side size price)]
-    (add-watch (ref order) key watcher )))
 
 (def order-type-dispatch (fn [_ ^Order order-ref & more] (:type @order-ref)))
 

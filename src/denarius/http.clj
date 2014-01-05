@@ -4,8 +4,8 @@
         (compojure [core :only [defroutes GET POST]]
                    [handler :only [site]]
                    [route :only [files not-found]])
-        [denarius.engine :only [create-order-ref
-                                insert-order
+        denarius.order
+        [denarius.engine :only [insert-order
                                 match-order]])
   (:require [org.httpkit.client :as http]
             [compojure.route :as route]))
@@ -31,7 +31,7 @@
                                                  :size
                                                  :price]] (l params))
         side      (if (= side-str ":bid") :bid :ask)
-        order-ref (create-order-ref (rand-int 999999999) broker-id :limit side (Integer. size) (Integer. price) nil nil)]
+        order-ref (create-order-ref (get-order-id) broker-id :limit side (Integer. size) (Integer. price) nil nil)]
     (insert-order @book order-ref)
     (with-channel req channel
       (send! channel {:status 200

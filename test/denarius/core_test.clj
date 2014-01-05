@@ -2,6 +2,7 @@
   (:use clojure.core
         clojure.test
         clojure.tools.logging
+        denarius.order
         denarius.core
         denarius.engine)
   (:require [org.httpkit.client :as http]
@@ -109,11 +110,13 @@
                                                   total-ask))
                                          ))))
                    total         (future (send-function))]
-               @(time (start-matching-loop))
-               (Thread/sleep idle-time)
-               (let [ask-total (:ask @total)
-                     bid-total (:bid @total)]
-                 (is (= (max 0 (- bid-total ask-total)) (market-depth @book :bid price)))
-                 (is (= (max 0 (- ask-total bid-total)) (market-depth @book :ask price))) )
-               (stop-server) ))
+               (time 
+                 (do (start-matching-loop)
+                     (let [ask-total (:ask @total)
+                           bid-total (:bid @total)]
+                        (is (= (max 0 (- bid-total ask-total)) (market-depth @book :bid price)))
+                        (is (= (max 0 (- ask-total bid-total)) (market-depth @book :ask price))) )
+                     ))
+               (stop-server)
+               ))
     ))

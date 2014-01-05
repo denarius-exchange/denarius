@@ -1,6 +1,7 @@
 (ns denarius.core
   (:use clojure.core
         [clojure.tools.logging :only [info]]
+        denarius.order
         denarius.engine)
   (:require denarius.http) )
 

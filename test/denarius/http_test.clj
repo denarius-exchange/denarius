@@ -1,5 +1,6 @@
 (ns denarius.http-test
   (:use clojure.test
+        denarius.order
         denarius.engine
         denarius.http)
   (:require [org.httpkit.client :as http]))
