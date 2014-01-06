@@ -3,7 +3,8 @@
         denarius.order
         denarius.engine
         denarius.http)
-  (:require [org.httpkit.client :as http]))
+  (:require [org.httpkit.client :as http]
+            [clojure.data.json :as json]))
 
 (deftest test-http
   (let [order-id-1 1
@@ -28,13 +29,13 @@
     (testing "Two limit orders sent to the HTTP server. Check if they exist on the book"
              (let [order-book     (ref (create-order-book asset-name))
                    matching-agent (agent 1)
-                   options-ask    {:broker-id 1 :side :ask :size 2 :price 10}
-                   options-bid    {:broker-id 1 :side :bid :size 3 :price 10}]
+                   options-ask    (json/write-str {:broker-id 1 :side :ask :size 2 :price 10})
+                   options-bid    (json/write-str {:broker-id 1 :side :bid :size 3 :price 10})]
                (start-http order-book)
                @(http/post (str "http://localhost:" port "/order-new-limit")
-                          (assoc options :query-params options-ask))
+                          (assoc options :query-params {:order options-ask}))
                @(http/post (str "http://localhost:" port "/order-new-limit")
-                          (assoc options :query-params options-bid))
+                          (assoc options :query-params {:order options-bid}))
                (is (= 3 (market-depth @order-book :bid price)))
                (is (= 2 (market-depth @order-book :ask price))) ))
     ))
