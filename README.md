@@ -7,6 +7,12 @@ Open-source financial exchange software.
 - A matching engine that implements market and limit orders.
 - An HTTP/JSON backend server for receiving oders
 
+## ToDo (Immediately)
+
+- Asset properties handling
+- Customer/Broker Desks account handling
+- Feedback to order senders (order execution, desks account balance...)
+
 ## Dependencies
 
 - HTTP-Kit/Compojure/Ring
