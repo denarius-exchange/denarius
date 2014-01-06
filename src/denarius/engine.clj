@@ -33,6 +33,10 @@
         (count @(@(side order-book) price))
         0 ))))
 
+(defn order-market-side [book side]
+  (if (= side :ask)
+    (:market-ask book)
+    (:market-bid book) ))
 
 (defn market-depth
   ([^Book order-book side]
@@ -46,13 +50,11 @@
         (apply + (map (comp :size deref) @(@(side order-book) price)))
         0 )) ))
 
+(defn size-market-orders [^Book order-book side]
+  (apply + (map (comp :size deref) @(order-market-side order-book side)) ))
+
 
 (def order-type-dispatch (fn [_ ^Order order-ref & more] (:type @order-ref)))
-
-(defn order-market-side [book side]
-  (if (= side :ask)
-    (:market-ask book)
-    (:market-bid book) ))
 
 (defmulti insert-order order-type-dispatch)
 
@@ -156,8 +158,8 @@
           (alter ask dissoc price) )
       (doseq [price (keys @bid)]
           (alter bid dissoc price) )
-      (ref-set mkt-ask {})
-      (ref-set mkt-bid {}) )))
+      (ref-set mkt-ask (list))
+      (ref-set mkt-bid (list)) )))
 
 
 (defmulti match-order order-type-dispatch)
@@ -204,17 +206,18 @@
              level-ref  (if-not (empty? @mkt-mtch-ref)
                           mkt-mtch-ref
                           best-lvl-ref)]
-        (if (and level-ref best-lvl-ref)
+        (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
           (let [first-available-ref (last @level-ref)
                 first-available     @first-available-ref
                 available-size      (:size first-available)
-                size                (:size @order-ref)]
+                size                (:size @order-ref)
+                price               (:price @best-lvl-ref)]
             (cross first-available-ref order-ref (min available-size size) 
-                   (:price @best-lvl-ref))
+                   price)
             (if (> available-size size)
               (do
                 (alter first-available-ref update-in [:size] - size)
-                (remove-order book order-ref) )
+                (remove-order book order-ref))
               (do
                 (alter order-ref update-in [:size] - available-size)
                 (alter first-available-ref update-in [:size] - available-size)
@@ -240,4 +243,5 @@
                             (last @(best-price-level-ref book :ask))
                             nil)))]
         (if order-ref
-          (match-order book order-ref cross) )))))
+          (match-order book order-ref cross)
+          )))))
