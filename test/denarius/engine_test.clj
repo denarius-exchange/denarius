@@ -142,7 +142,6 @@
                  (match-order order-book order-bid-2 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= 1 (market-depth order-book :bid price )))
-                 (is (= (list order-id-2 1) @result-bid))
                  (is (= [price size])) ))
       (testing "Matching order (existing is bid, incoming is ask): Partial fulfilling, 2 to 1"
                (let [order-book (create-order-book asset-name)
@@ -153,7 +152,6 @@
                  (match-order order-book order-ask-1 cross)
                  (is (= 0 (market-depth order-book :ask price )))
                  (is (= 1 (market-depth order-book :bid price )))
-                 (is (= (list order-id-2 1) @result-bid))
                  (is (= [price size])) ))
       (testing "Matching order (existing bid, incoming cheaper ask; Partial fulfilling, 2 to 1"
                (let [order-book (create-order-book asset-name)
