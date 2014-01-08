@@ -28,7 +28,7 @@ Development servers can be set up with Leiningen with
 lein run
 ```
 
-Assiming you have clojure.data.json required as json, and http-kit as http,
+Assuming you have clojure.data.json required as json, and http-kit as http,
 you can send ASK orders (choose size or leave 1) from the REPL with
 
 ```Clojure
