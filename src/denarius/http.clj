@@ -1,6 +1,7 @@
 (ns denarius.http
   (:use [clojure.tools.logging :only [info debug]]
         org.httpkit.server
+        org.httpkit.timer
         (compojure [core :only [defroutes GET POST]]
                    [handler :only [site]]
                    [route :only [files not-found]])
@@ -24,8 +25,18 @@
               (str uri "?" qs) uri))
       resp)))
 
+(defn increment-position [channel]
+  (fn [order-ref-1 order-ref-2 size price]
+    (send! channel {:status 200
+                    :headers {"Content-Type" "text/plain"}
+                    :body (if (= size 0)
+                            (str "Order" (:order-id @order-ref-1)
+                                 " totally executed ")
+                            (str "Order" (:order-id @order-ref-1)
+                                 " partially executed: " size) )} false)
+    (if (= size (:size @order-ref-1)) (close channel)) ))
 
-(defn parse-params [req order-type]
+(defn parse-params [req channel order-type]
   (let [params       (:order (:params req))
         order-params (for [l [:broker-id
                               :side
@@ -37,25 +48,26 @@
          size price] order-params
         side         (if (= side-str "bid") :bid :ask)
         order-ref    (create-order-ref (get-order-id) broker-id order-type side
-                                    (Integer. size) (Integer. price) nil nil)]
+                                       (Integer. size) (Integer. price) nil
+                                       [(increment-position channel)])]
     [broker-id side size price order-ref]))
     
 
 (defn on-order-new-limit [req]
-  (let [[broker-id side size price order-ref] (parse-params req :limit)]
-    (insert-order @book order-ref)
-    (with-channel req channel
+  (with-channel req channel
+    (let [[broker-id side size price order-ref] (parse-params req channel :limit)]
+      (insert-order @book order-ref)
       (send! channel {:status 200
                       :headers {"Content-Type" "text/plain"}
-                      :body (str "New limit!")}) )))
+                      :body (str "New limit!")} false) )))
 
 (defn on-order-new-market [req]
-  (let [[broker-id side size price order-ref] (parse-params req :market)]
-    (insert-order @book order-ref)
-    (with-channel req channel
+  (with-channel req channel
+    (let [[broker-id side size price order-ref] (parse-params req channel :market)]
+      (insert-order @book order-ref)
       (send! channel {:status 200
                       :headers {"Content-Type" "text/plain"}
-                      :body (str "New market!")}) )))
+                      :body (str "New market!")} false) )))
 
 ;(json-str (get-msgs (@clients channel)))   
 (defroutes routes
@@ -68,5 +80,4 @@
   
   (info "Starting server on port" port)
   (run-server (-> #'routes site wrap-request-logging) {:port port})
-  ;(run-server async-handler {:port 8081}))
   )

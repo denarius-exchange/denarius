@@ -11,9 +11,9 @@
   (->Order order-id broker-id type side size price ))
 
 (defn create-order-ref [order-id broker-id
-                        type side size price key watcher]
+                        type side size price unused-key execution-list]
   (let [order (create-order order-id broker-id type side size price)]
-    (add-watch (ref order) key watcher )))
+    (ref (with-meta order {:on-matching execution-list}) )))
 
 
 (def last-oder-id (ref 0))
