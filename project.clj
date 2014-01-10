@@ -8,5 +8,6 @@
                  [ring "1.2.1"]
                  [http-kit "2.1.13"]
                  [compojure "1.1.6"]
-                 [org.clojure/data.json "0.2.3"]]
+                 [org.clojure/data.json "0.2.3"]
+                 [aleph "0.3.0"]]
   :main denarius.core)

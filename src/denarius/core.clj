@@ -3,7 +3,8 @@
         [clojure.tools.logging :only [info]]
         denarius.order
         denarius.engine)
-  (:require denarius.http) )
+  (:require denarius.http
+            denarius.tcp) )
 
 
 (def book (ref (create-order-book "EUR")))
@@ -35,7 +36,8 @@
 
 (defn start-brokering-interfaces []
   (info "Starting brokering interfaces")
-  (denarius.http/start-http book))
+  ;(denarius.http/start-http book))
+  (denarius.tcp/start-tcp book))
 
 
 (defn -main [& args]
