@@ -1,3 +1,4 @@
+b
 # Denarius
 
 Open-source financial exchange software.
@@ -22,16 +23,26 @@ Open-source financial exchange software.
 ## Usage
 
 Currently there are no binaries to this software.
-Development servers can be set up with Leiningen with
+
+To try out Denarius, start a development server with:
 
 ```Bash
 lein run
 ```
 
-Assuming you have clojure.data.json required as json, and http-kit as http,
-you can send ASK orders (choose size or leave 1) from the REPL with
+Then start the REPL:
+
+```Bash
+lein repl
+```
+
+And send orders to the server with:
 
 ```Clojure
+(require '[clojure.data.json :as json])
+
+(require '[org.httpkit.client :as http])
+
 (defn callback [{:keys [status headers body error opts]}]
 	(println body) )
        
@@ -46,7 +57,8 @@ you can send ASK orders (choose size or leave 1) from the REPL with
                callback ) )
 ```
 
-Similarly, you can send BID orders by changing the :side parameter.
+You can change order size by changing the ``:size`` parameter and order
+side by changing the ``:side`` paramter to ``BID``.
 
 The HTTP backend server now returns matching information upon order full execution.
 
