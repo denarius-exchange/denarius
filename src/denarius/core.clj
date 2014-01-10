@@ -12,12 +12,14 @@
 
 (defn cross-function [order-ref-1 order-ref-2 size price]
   ; first make changes persistent. If impossible, return false
-  (let [more (:on-matching (meta @order-ref-1))]
-    (doall (map #(% order-ref-1 order-ref-2 size price) more)) )
-  (let [more (:on-matching (meta @order-ref-2))]
-    (doall (map #(% order-ref-2 order-ref-1 size price) more)) )
-  true ; return true on no error
-  )
+  (future
+    (let [more (:on-matching (meta @order-ref-1))]
+      (doall (map #(% order-ref-1 order-ref-2 size price) more)) )
+    (let [more (:on-matching (meta @order-ref-2))]
+      (doall (map #(% order-ref-2 order-ref-1 size price) more)) )
+    )
+  ; return true on no error
+  true)
 
 (defn start-matching-loop []
   (let [cross-function cross-function]

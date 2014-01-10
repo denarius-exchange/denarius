@@ -32,21 +32,23 @@ Assuming you have clojure.data.json required as json, and http-kit as http,
 you can send ASK orders (choose size or leave 1) from the REPL with
 
 ```Clojure
-(let [options    {:timeout 200
-                     :basic-auth ["user" "pass"]
-                     :user-agent "User-Agent-string"
-                     :headers {"X-Header" "Value"}}
+(defn callback [{:keys [status headers body error opts]}]
+	(println body) )
+       
+(let [options {:timeout 200
+               :basic-auth ["user" "pass"]
+               :user-agent "User-Agent-string"
+               :headers {"X-Header" "Value"}}
       port    8081
       opt-ask (json/write-str {:broker-id 1 :side :ask :size 1 :price 10})]
    @(http/post (str "http://localhost:" port "/order-new-limit")
-               (assoc options :query-params {:order opt-ask}) ) )
+               (assoc options :query-params {:order opt-ask})
+               callback ) )
 ```
 
 Similarly, you can send BID orders by changing the :side parameter.
 
-Notice that *you will get no response from the server*
-(until the cross callbacks are implemented and connected with the HTTP/JSON
-code). 
+The HTTP backend server now returns matching information upon order full execution.
 
 ## License
 

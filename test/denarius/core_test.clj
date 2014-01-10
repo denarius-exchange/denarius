@@ -20,8 +20,6 @@
         result-bid (ref nil)
         result-ask (ref nil)
         last-price (ref nil)
-        cross      (fn [order-in-book order-incoming size price]
-                     (dosync (ref-set last-price [price size])))
         asset-name "EURUSD"
         options    {:timeout 200             ; ms
                     :basic-auth ["user" "pass"]
@@ -119,6 +117,7 @@
                         (is (= (max 0 (- bid-total ask-total)) (market-depth @book :bid price)))
                         (is (= (max 0 (- ask-total bid-total)) (market-depth @book :ask price))) )
                      ))
+               (Thread/sleep idle-time)
                (stop-server)
                ))
     (testing "Bulk test: Send 1000 random-side limit AND market orders and check matching"
@@ -173,6 +172,7 @@
                         (is (if (= 0 (market-depth @book :ask price)) (< (count @(:market-ask @book)) max-size) true))
                         (is (if (= 0 (market-depth @book :bid price)) (< (count @(:market-bid @book)) max-size) true))
                      )))
+               (Thread/sleep idle-time)
                (stop-server)
                ))
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check

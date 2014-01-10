@@ -25,16 +25,22 @@
               (str uri "?" qs) uri))
       resp)))
 
-(defn increment-position [channel]
+(def registered-channel (ref nil))
+
+(defn on-register-listener [req]
+  (with-channel req channel
+    (dosync (ref-set registered-channel channel)) ))
+
+(defn increment-position []
   (fn [order-ref-1 order-ref-2 size price]
-    (send! channel {:status 200
-                    :headers {"Content-Type" "text/plain"}
-                    :body (if (= size 0)
-                            (str "Order" (:order-id @order-ref-1)
-                                 " totally executed ")
-                            (str "Order" (:order-id @order-ref-1)
-                                 " partially executed: " size) )} false)
-    (if (= size (:size @order-ref-1)) (close channel)) ))
+    (if-not (nil? @registered-channel)
+      (send! @registered-channel
+             (json/json-str {:status 200
+                             :headers {"Content-Type" "text/plain"}
+                             :body (str "Order" (:order-id @order-ref-1)
+                                        " partilly executed size: " size)})
+             false) )
+    ))
 
 (defn parse-params [req channel order-type]
   (let [params       (:order (:params req))
@@ -49,7 +55,7 @@
         side         (if (= side-str "bid") :bid :ask)
         order-ref    (create-order-ref (get-order-id) broker-id order-type side
                                        (Integer. size) (Integer. price) nil
-                                       [(increment-position channel)])]
+                                       [(increment-position)])]
     [broker-id side size price order-ref]))
     
 
@@ -57,22 +63,25 @@
   (with-channel req channel
     (let [[broker-id side size price order-ref] (parse-params req channel :limit)]
       (insert-order @book order-ref)
-      (send! channel {:status 200
-                      :headers {"Content-Type" "text/plain"}
-                      :body (str "New limit!")} false) )))
+      (send! channel
+             {:status 200
+              :headers {"Content-Type" "text/plain"}
+              :body (str "New limit!")} true ) )))
 
 (defn on-order-new-market [req]
   (with-channel req channel
     (let [[broker-id side size price order-ref] (parse-params req channel :market)]
       (insert-order @book order-ref)
-      (send! channel {:status 200
-                      :headers {"Content-Type" "text/plain"}
-                      :body (str "New market!")} false) )))
-
+      (send! channel 
+             {:status 200
+              :headers {"Content-Type" "text/plain"}
+              :body (str "New market!")} true ))))
+  
 ;(json-str (get-msgs (@clients channel)))   
 (defroutes routes
   (POST "/order-new-limit" [] on-order-new-limit)
   (POST "/order-new-market" [] on-order-new-market)
+  (POST "/register-listener" [] on-register-listener)
   (route/not-found "<h1>Page not found</h1>"))
 
 (defn start-http [order-book]
