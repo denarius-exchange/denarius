@@ -161,15 +161,16 @@
                (Thread/sleep (* 3 idle-time))
                (time 
                  (do 
-                   (let [ask-total (:ask @total)
-                         bid-total (:bid @total)]
-                     (is (= 0 (min (market-depth @book :ask price)
-                                   (market-depth @book :bid price))) )
+                   (let [ask-total   (:ask @total)
+                         bid-total   (:bid @total)
+                         mktdpth-ask (market-depth @book :ask price)
+                         mktdpth-bid (market-depth @book :bid price)]
+                     (is (= 0 (min mktdpth-ask mktdpth-bid)) )
                      (is (= (max (- bid-total ask-total) (- ask-total bid-total))
-                            (max (+ (market-depth @book :ask price) (size-market-orders @book :ask))
-                                 (+ (market-depth @book :bid price) (size-market-orders @book :bid)) )))
-                     (is (if (= 0 (market-depth @book :ask price)) (< (count @(:market-ask @book)) max-size) true))
-                     (is (if (= 0 (market-depth @book :bid price)) (< (count @(:market-bid @book)) max-size) true))
+                            (max (+ mktdpth-ask (size-market-orders @book :ask))
+                                 (+ mktdpth-bid (size-market-orders @book :bid)) )))
+                     (is (if (= 0 mktdpth-ask) (< (count @(:market-ask @book)) max-size) true))
+                     (is (if (= 0 mktdpth-bid) (< (count @(:market-bid @book)) max-size) true))
                      )))
                (stop-server)
                ))
@@ -212,12 +213,13 @@
                (Thread/sleep idle-time)
                (time 
                  (do 
-                   (let [ask-total (:ask @total)
-                         bid-total (:bid @total)]
-                     (is (= 0 (min (market-depth @book :ask price)
-                                   (market-depth @book :bid price))) )
-                     (is (if (= 0 (market-depth @book :ask price)) (= (count @(:market-ask @book)) 0) true))
-                     (is (if (= 0 (market-depth @book :bid price)) (= (count @(:market-bid @book)) 0) true))
+                   (let [ask-total   (:ask @total)
+                         bid-total   (:bid @total)
+                         mktdpth-ask (market-depth @book :ask price)
+                         mktdpth-bid (market-depth @book :bid price)]
+                     (is (= 0 (min mktdpth-ask mktdpth-bid)) )
+                     (is (if (= 0 mktdpth-ask) (= (count @(:market-ask @book)) 0) true))
+                     (is (if (= 0 mktdpth-bid) (= (count @(:market-bid @book)) 0) true))
                      (is (< (:price @(first @(best-price-level-ref @book :bid)))
                             (:price @(first @(best-price-level-ref @book :ask)))))
                      )))
