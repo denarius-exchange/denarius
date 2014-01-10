@@ -10,14 +10,10 @@
 
 (def port 8080)
 
-(def channels (ref {}))
-
 (def book (ref nil))
 
 (defn inform-match [channel]
   (fn [order-ref-1 order-ref-2 size price]
-    ;(let [broker-id (:broker-id @order-ref-1)
-    ;      channel   (broker-id @channels)]
     (if-not (nil? channel)
       (enqueue channel 
                (json/json-str {:msg-type 1
@@ -27,7 +23,6 @@
 (defn handler [channel broker-id]
   (receive-all channel
                (fn [req]
-                 (println req)
                  (let [req-params (for [l [:req-type
                                            :broker-id
                                            :order-id
@@ -43,7 +38,6 @@
                         price]             req-params
                        order-type          (case order-type-str "limit" :limit "market" :market)
                        side                (case side-str "bid" :bid "ask" :ask)]
-                   (dosync alter channels #(assoc % broker-id channel) )
                    (case req-type
                      1 (let [order-ref  (create-order-ref order-id broker-id
                                                           order-type side size price 
