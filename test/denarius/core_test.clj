@@ -9,7 +9,6 @@
         denarius.engine)
   (:require clojure.tools.logging
             [clojure.data.json :as json]
-            [org.httpkit.client :as http]
             denarius.tcp))
 
 (deftest test-core
