@@ -1,4 +1,3 @@
-b
 # Denarius
 
 Open-source financial exchange software.
