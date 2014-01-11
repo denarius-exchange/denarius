@@ -22,15 +22,14 @@
   true)
 
 (defn start-matching-loop []
-  (let [cross-function cross-function]
-    (send-off matching-agent
-              (fn [agent-value]
-                (while true
-                  (do ;(java.lang.Thread/sleep 1)
-                    (try
-                      (match-once @book cross-function )
-                      (catch Exception e))
-                    ))))))
+  (send-off matching-agent
+            (fn [agent-value]
+              (while true
+                (do ;(java.lang.Thread/sleep 1)
+                  (try
+                    (match-once @book cross-function )
+                    (catch Exception e))
+                  )))))
 
 
 (defn start-brokering-interfaces []
