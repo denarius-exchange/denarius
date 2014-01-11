@@ -3,8 +3,7 @@
         [clojure.tools.logging :only [info]]
         denarius.order
         denarius.engine)
-  (:require denarius.http
-            denarius.tcp) )
+  (:require denarius.tcp) )
 
 
 (def book (ref (create-order-book "EUR")))
