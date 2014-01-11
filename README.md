@@ -61,7 +61,8 @@ side by changing the ``:side`` paramter to ``BID``.
 
 The HTTP backend server now returns matching information upon order full execution.
 
-##
+
+## Contact
 
 Mailing list (important announcements): denarius@librelist.com
 General announcements: http://machinomics.blogspot.com
