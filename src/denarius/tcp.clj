@@ -18,7 +18,8 @@
       (enqueue channel 
                (json/json-str {:msg-type 1
                                :order-id (:order-id @order-ref-1)
-                               :size size})) )))
+                               :size size
+                               :price price})) )))
 
 (defn handler [channel broker-id]
   (receive-all channel
