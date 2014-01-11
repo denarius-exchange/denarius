@@ -8,5 +8,6 @@
                  [ring "1.2.1"]
                  [compojure "1.1.6"]
                  [org.clojure/data.json "0.2.3"]
-                 [aleph "0.3.0"]]
+                 [aleph "0.3.0"]
+                 [org.clojure/tools.cli "0.3.1"]]
   :main denarius.core)
