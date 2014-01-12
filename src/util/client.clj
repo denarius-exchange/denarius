@@ -56,10 +56,10 @@
 (defmethod show-commands "send" [command]
   (println "\tSend order to the server\n"
            "\tOptions:\n"
-           "\t-l\t\t\tLimit order\n"
-           "\t-m\t\t\tMarket order\n"
-           "\t-b\t\t\tBid order\n"
-           "\t-a\t\t\tAsk order\n"
+           "\t-l\t\tLimit order\n"
+           "\t-m\t\tMarket order\n"
+           "\t-b\t\tBid order\n"
+           "\t-a\t\tAsk order\n"
            "\t-s SIZE\t\tOrder size\n"
            "\t-p PRICE\tOrder price\n"))
   
