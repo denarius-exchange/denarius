@@ -211,7 +211,7 @@
                 first-available     @first-available-ref
                 available-size      (:size first-available)
                 size                (:size @order-ref)
-                price               (:price @best-lvl-ref)]
+                price               (:price @(first @best-lvl-ref))]
             (cross first-available-ref order-ref (min available-size size) 
                    price)
             (if (> available-size size)
