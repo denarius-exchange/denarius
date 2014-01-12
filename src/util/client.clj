@@ -66,7 +66,7 @@
 (defn print-order [order-id order-type side size price]
   (println "Sending" (if (= :market order-type) "MARKET" "LIMIT")
            "order," (if (= :ask side) "SELLING" "BUYING")
-           size (str "units" (if (= :market order-type) "" (str "at price" price)))
+           size  "units" (str (if (= :market order-type) "" (str "at price " price)))
            (str ", with ID=" order-id)) )
 
 (defn print-response [order-id side price]
