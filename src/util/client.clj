@@ -44,16 +44,17 @@
    ["-?" "--help" "Show help"]])
 
 
-(defmulti show-commands identity)
+(defmulti show-commands identity :default nil)
 
 (defmethod show-commands nil [command]
+  (print " ") ; space formatting
   (println "send\t\tSend an order to the server\n"
-           "position\tShow net position"
+           "position\tShow net position\n"
            "help\t\tShow this help\n"
            "exit\t\tQuit program (also quit)\n") )
 
 (defmethod show-commands "send" [command]
-  (println "send\tSend order to the server\n"
+  (println "\tSend order to the server\n"
            "\tOptions:\n"
            "\t-l\t\t\tLimit order\n"
            "\t-m\t\t\tMarket order\n"
@@ -63,13 +64,14 @@
            "\t-p PRICE\tOrder price\n"))
   
 (defn print-order [order-id order-type side size price]
-  (println "Sending " (if (= :market order-type) "MARKET" "LIMIT") " "
-           " order, " (if (= :ask side) "SELLING" "BUYING") " "
-           size " units at price " price ", with ID=" order-id) )
+  (println "Sending" (if (= :market order-type) "MARKET" "LIMIT")
+           "order," (if (= :ask side) "SELLING" "BUYING")
+           size (str "units" (if (= :market order-type) "" (str "at price" price)))
+           (str ", with ID=" order-id)) )
 
 (defn print-response [order-id side price]
-  (println "Your " (if (= :ask side) "SELLING" "BUYING") " order with ID=" order-id
-           " has been executed at price " price))
+  (println "Your " (if (= :ask side) "SELLING" "BUYING") (str "order with ID=" order-id)
+           "has been executed at price" price))
 
 (defn build-position [data]
   (let [order-map (json/read-str data :key-fn keyword)
@@ -80,7 +82,6 @@
     (if (= 1 msg-type)
       (let [side (first (keep #(if (= order-id (:order-id %)) (:side %)) @orders))]
         (dosync (alter position (if (= :ask side) (partial - size) (partial + size))))
-        (println side)
         (print-response order-id side price) ))))
 
 
@@ -102,9 +103,11 @@
 (defn input [channel]
   (loop [order-id 1]
     (print "> ")
+    (flush)
     (let [v (read-line)]
       (if (exit? v)
         (do
+          (close channel)
           (println "Bye!"))
         (let [line    (.split v " ")
               command (first line)
@@ -115,7 +118,9 @@
           (case command
             "help"     (show-commands (second line))
             "send"     (send-order channel order-id opt)
-            "position" (println "CURRENT NET POSITION: " @position))
+            "position" (println "CURRENT NET POSITION: " @position)
+            (println command "is not a command. See help,"))
+          (Thread/sleep 200)
           (recur (inc order-id) ))))))
 
 
@@ -132,4 +137,4 @@
                      :frame (string :utf-8 :delimiters ["\r\n"])}
             channel (wait-for-result (tcp-client tcp-opt))]
         (receive-all channel build-position)
-        (input channel)))))
+        (input channel)))) )
