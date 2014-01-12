@@ -5,8 +5,6 @@
             :url "http://opensource.org/licenses/MIT"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
-                 [ring "1.2.1"]
-                 [compojure "1.1.6"]
                  [org.clojure/data.json "0.2.3"]
                  [aleph "0.3.0"]
                  [org.clojure/tools.cli "0.3.1"]]
