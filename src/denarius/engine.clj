@@ -243,5 +243,13 @@
                             (last @(best-price-level-ref book :ask))
                             nil)))]
         (if order-ref
-          (match-order book order-ref cross)
-          )))))
+          (match-order book order-ref cross) )))))
+
+
+(defn start-matching-loop [book cross-function]
+  (future
+    (while true
+      (do ;(java.lang.Thread/sleep 1)
+        (try
+          (match-once @book cross-function )
+          (catch Exception e)) ))))

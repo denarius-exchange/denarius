@@ -36,7 +36,7 @@
                                                 :order-type :limit :side :bid :size 1 :price 10})
                    stop-server (denarius.tcp/start-tcp book)
                    channel     (wait-for-result (tcp-client options))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (enqueue channel req-ask)
                (enqueue channel req-bid)
                (Thread/sleep idle-time)
@@ -55,7 +55,7 @@
                                                 :order-type :limit :side :bid :size 2 :price 10})
                    stop-server (denarius.tcp/start-tcp book)
                    channel     (wait-for-result (tcp-client options))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (enqueue channel req-ask-1)
                (enqueue channel req-bid-1)
                (enqueue channel req-ask-2)
@@ -73,7 +73,7 @@
                                                 :order-type :limit :side :bid :size 1 :price 10})
                    stop-server (denarius.tcp/start-tcp book)
                    channel     (wait-for-result (tcp-client options))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (enqueue channel req-ask)
                (enqueue channel req-bid)
                (Thread/sleep idle-time)
@@ -111,7 +111,7 @@
                                                   total-ask))
                                          ))))
                    total         (future (send-function))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (Thread/sleep (* 3 idle-time))
                (time 
                  (do (let [ask-total (:ask @total)
@@ -156,7 +156,7 @@
                                                   total-ask))
                                          ))))
                    total         (future (send-function))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (Thread/sleep (* 3 idle-time))
                (time 
                  (do 
@@ -208,7 +208,7 @@
                                                   total-ask))
                                          ))))
                    total         (future (send-function))]
-               (start-matching-loop)
+               (start-matching-loop book cross-function)
                (Thread/sleep idle-time)
                (time 
                  (do 

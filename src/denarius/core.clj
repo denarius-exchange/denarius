@@ -21,16 +21,6 @@
   ; return true on no error
   true)
 
-(defn start-matching-loop []
-  (send-off matching-agent
-            (fn [agent-value]
-              (while true
-                (do ;(java.lang.Thread/sleep 1)
-                  (try
-                    (match-once @book cross-function )
-                    (catch Exception e))
-                  )))))
-
 
 (defn start-brokering-interfaces []
   (info "Starting brokering interfaces")
@@ -41,4 +31,4 @@
 (defn -main [& args]
   (info "Running Denarius")
   (start-brokering-interfaces)
-  (start-matching-loop) )
+  (start-matching-loop book cross-function) )
