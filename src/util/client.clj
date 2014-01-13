@@ -114,7 +114,6 @@
               body    (rest line)
               params  (parse-opts body read-options)
               opt     (:options params)]
-          (println command)
           (case command
             "help"     (show-commands (second line))
             "send"     (send-order channel order-id opt)
