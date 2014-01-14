@@ -34,7 +34,7 @@ Then send orders to the server with the utility client ([See Wiki](https://githu
 lein -m util.client/-main
 ```
 
-If you want to make your own client API, you can foolow the code in the
+If you want to make your own client API, you can follow the code in the
 utility client.
 
 The server now informs about (partial) order execution, on every execution
