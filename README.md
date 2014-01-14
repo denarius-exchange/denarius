@@ -11,11 +11,10 @@ Open-source financial exchange software.
 
 - Asset properties handling
 - Customer/Broker Desks account handling
-- Feedback to order senders (order execution, desks account balance...)
 
 ## Dependencies
 
-- HTTP-Kit/Compojure/Ring
+- Aleph/Lamina/Gloss
 - JSON (data.json)
 - Log (tools.logging)
 
@@ -29,37 +28,17 @@ To try out Denarius, start a development server with:
 lein run
 ```
 
-Then start the REPL:
+Then send orders to the server with the utility client ([See Wiki](https://github.com/analyticbastard/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
 
 ```Bash
-lein repl
+lein -m util.client/-main
 ```
 
-And send orders to the server with:
+If you want to make your own client API, you can foolow the code in the
+utility client.
 
-```Clojure
-(require '[clojure.data.json :as json])
-
-(require '[org.httpkit.client :as http])
-
-(defn callback [{:keys [status headers body error opts]}]
-	(println body) )
-       
-(let [options {:timeout 200
-               :basic-auth ["user" "pass"]
-               :user-agent "User-Agent-string"
-               :headers {"X-Header" "Value"}}
-      port    8081
-      opt-ask (json/write-str {:broker-id 1 :side :ask :size 1 :price 10})]
-   @(http/post (str "http://localhost:" port "/order-new-limit")
-               (assoc options :query-params {:order opt-ask})
-               callback ) )
-```
-
-You can change order size by changing the ``:size`` parameter and order
-side by changing the ``:side`` paramter to ``BID``.
-
-The HTTP backend server now returns matching information upon order full execution.
+The server now informs about (partial) order execution, on every execution
+it makes, with the communications channel registered upon order entry. 
 
 
 ## Contact
