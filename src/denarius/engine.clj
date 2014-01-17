@@ -75,7 +75,7 @@
   (let [side     (:side @order-ref)
         side-ref (order-market-side book side)]
     (dosync
-        (alter side-ref #(conj % order-ref)) )))
+      (alter side-ref #(conj % order-ref)) )))
 
 
 (defmulti remove-order order-type-dispatch)
@@ -98,7 +98,7 @@
         side      (:side @order-ref)
         side-ref  (order-market-side book side)
         pred      #(= (:order-id @%) order-id)]
-        (dosync (alter side-ref #(remove pred %))) true ))
+    (dosync (alter side-ref #(remove pred %))) true ))
 
 
 (defn best-price-level-ref
@@ -155,9 +155,9 @@
           mkt-ask (:market-ask book)
           mkt-bid (:market-bid book)]
       (doseq [price (keys @ask)]
-          (alter ask dissoc price) )
+        (alter ask dissoc price) )
       (doseq [price (keys @bid)]
-          (alter bid dissoc price) )
+        (alter bid dissoc price) )
       (ref-set mkt-ask (list))
       (ref-set mkt-bid (list)) )))
 
@@ -172,26 +172,27 @@
         order-side    (:side @order-ref)
         matching-side (if (= order-side :bid) :ask :bid)
         side-ref      (matching-side book)]
-    (dosync
-      (loop [level-ref (best-price-level-ref book matching-side price)]
-        (if level-ref
-          (if-not (empty? @level-ref)
-            (let [first-available-ref (last @level-ref)
-                  first-available     @first-available-ref
-                  available-size      (:size first-available)
-                  size                (:size @order-ref)]
-              (cross first-available-ref order-ref (min available-size size) price)
-              (if (> available-size size)
-                (do
-                  (alter first-available-ref update-in [:size] - size)
-                  (remove-order book order-ref) )
-                (do
-                  (alter order-ref update-in [:size] - available-size)
-                  (alter first-available-ref update-in [:size] - available-size)
-                  (remove-order book first-available-ref)
-                  (if (= size available-size)
-                    (remove-order book order-ref)
-                    (recur (best-price-level-ref book matching-side price) )))))))))))
+    (loop []
+      (dosync
+        (let [level-ref (best-price-level-ref book matching-side price)]
+          (if level-ref
+            (if-not (empty? @level-ref)
+              (let [first-available-ref (last @level-ref)
+                    first-available     @first-available-ref
+                    available-size      (:size first-available)
+                    size                (:size @order-ref)]
+                (cross first-available-ref order-ref (min available-size size) price)
+                (if (> available-size size)
+                  (do
+                    (alter first-available-ref update-in [:size] - size)
+                    (remove-order book order-ref) )
+                  (do
+                    (alter order-ref update-in [:size] - available-size)
+                    (alter first-available-ref update-in [:size] - available-size)
+                    (remove-order book first-available-ref)
+                    (if (= size available-size)
+                      (remove-order book order-ref)
+                      (recur  ))))))))))))
 
 (defmethod match-order :market [^Book book ^Order order-ref cross]
   (let [order-id      (:order-id @order-ref)
@@ -201,33 +202,31 @@
         mkt-side      (order-market-side book order-side)
         mkt-mtch-side (if (= matching-side :bid) :market-bid :market-ask)
         mkt-mtch-ref  (mkt-mtch-side book)]
-    (dosync
-      (loop [best-lvl-ref (best-price-level-ref book matching-side)
-             level-ref  (if-not (empty? @mkt-mtch-ref)
-                          mkt-mtch-ref
-                          best-lvl-ref)]
-        (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
-          (let [first-available-ref (last @level-ref)
-                first-available     @first-available-ref
-                available-size      (:size first-available)
-                size                (:size @order-ref)
-                price               (:price @(first @best-lvl-ref))]
-            (cross first-available-ref order-ref (min available-size size) 
-                   price)
-            (if (> available-size size)
-              (do
-                (alter first-available-ref update-in [:size] - size)
-                (remove-order book order-ref))
-              (do
-                (alter order-ref update-in [:size] - available-size)
-                (alter first-available-ref update-in [:size] - available-size)
-                (remove-order book first-available-ref)
-                (if (= size available-size)
-                  (remove-order book order-ref)
-                  (recur (best-price-level-ref book matching-side)
-                         (if-not (empty? @mkt-mtch-ref)
+    (loop []
+      (dosync
+        (let [best-lvl-ref (best-price-level-ref book matching-side)
+              level-ref  (if-not (empty? @mkt-mtch-ref)
                            mkt-mtch-ref
-                           best-lvl-ref ) ))))))))))
+                           best-lvl-ref)]
+          (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
+            (let [first-available-ref (last @level-ref)
+                  first-available     @first-available-ref
+                  available-size      (:size first-available)
+                  size                (:size @order-ref)
+                  price               (:price @(first @best-lvl-ref))]
+              (cross first-available-ref order-ref (min available-size size) 
+                     price)
+              (if (> available-size size)
+                (do
+                  (alter first-available-ref update-in [:size] - size)
+                  (remove-order book order-ref))
+                (do
+                  (alter order-ref update-in [:size] - available-size)
+                  (alter first-available-ref update-in [:size] - available-size)
+                  (remove-order book first-available-ref)
+                  (if (= size available-size)
+                    (remove-order book order-ref)
+                    (recur )))))))))))
 
 (defn match-once [book cross]
   (let [market-ask (:market-ask book)
