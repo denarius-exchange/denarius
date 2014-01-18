@@ -350,7 +350,7 @@
                                                 (+ total-ask size)
                                                 total-ask ))))))
                    time-test   (fn []
-                                 (let [time-increment 50]
+                                 (let [time-increment 25]
                                    (loop [time-counter 0]
                                      (if (> time-counter max-time)
                                        time-counter   ; exit failing
@@ -359,7 +359,7 @@
                                          (do
                                            (Thread/sleep time-increment)
                                            (recur (+ time-counter time-increment)) ))))))]
-               (future (order-loop))
+               (order-loop)
                (start-matching-loop (ref order-book) cross)
                (Thread/sleep 50)
                (let [time-taken (time-test)]
