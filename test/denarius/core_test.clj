@@ -36,7 +36,7 @@
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         port        denarius.tcp/port
         idle-time   500
-        idle-time-2 3000]
+        idle-time-2 4000]
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
