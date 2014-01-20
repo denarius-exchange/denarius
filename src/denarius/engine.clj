@@ -251,4 +251,4 @@
       (do ;(java.lang.Thread/sleep 1)
         (try
           (match-once @book cross-function )
-          (catch Exception e)) ))))
+          (catch Exception e (println e) false)) ))))

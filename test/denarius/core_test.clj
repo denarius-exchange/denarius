@@ -36,7 +36,7 @@
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         port        denarius.tcp/port
         idle-time   500
-        idle-time-2 4000]
+        idle-time-2 9000]
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
@@ -161,8 +161,8 @@
                                                   total-ask)
                                                 (inc order-id) )
                                          )))))
-                                   total (send-function)]
-               (start-matching-loop book cross-function)
+                   total         (send-function)
+                   matching-loop (start-matching-loop book cross-function)]
                (Thread/sleep idle-time-2)
                (let [ask-total   (:ask total)
                      bid-total   (:bid total)
@@ -176,6 +176,7 @@
                  (is (if (= 0 mktdpth-bid) (< (count @(:market-bid @book)) max-size) true)) )
                (stop-server)
                (close channel)
+               (future-cancel matching-loop)
                ))
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
@@ -184,7 +185,6 @@
                    max-requests  1000
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []
-                                   (print "Control 3 ")
                                    (time 
                                      (loop [side      (if-not (= (rand-int 2) 0) :bid :ask)
                                           requests  0
