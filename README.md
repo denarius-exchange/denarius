@@ -1,5 +1,7 @@
 # Denarius
 
+[![Build Status](https://secure.travis-ci.org/analyticbastard/denarius.png?branch=master)](http://travis-ci.org/analyticbastard/denarius)
+
 Open-source financial exchange software.
 
 ## Status
