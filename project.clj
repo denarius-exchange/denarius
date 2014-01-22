@@ -7,5 +7,6 @@
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/data.json "0.2.3"]
                  [aleph "0.3.0"]
-                 [org.clojure/tools.cli "0.3.1"]]
+                 [org.clojure/tools.cli "0.3.1"]
+                 [sonian/carica "1.0.4" :exclusions [[cheshire]]]]
   :main denarius.core)
