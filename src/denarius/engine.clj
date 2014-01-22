@@ -1,5 +1,6 @@
 (ns denarius.engine
-  (:use denarius.order)
+  (:use denarius.order
+        carica.core)
   (:import [denarius.order Order]) )
 
 ; Order book record
@@ -246,9 +247,16 @@
 
 
 (defn start-matching-loop [book cross-function]
-  (future
-    (while true
-      (do ;(java.lang.Thread/sleep 1)
-        (try
-          (match-once @book cross-function )
-          (catch Exception e (println e) false)) ))))
+  (let [engine-threads (config :engine-threads)]
+    (loop [threads []
+           id      1]
+      (if (> id engine-threads)
+        threads
+        (conj threads 
+              (future
+                (while true
+                  (do ;(java.lang.Thread/sleep 1)
+                    (try
+                      (match-once @book cross-function )
+                      (catch Exception e (println e) false)) ))))
+        ))))

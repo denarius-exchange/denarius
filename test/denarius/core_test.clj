@@ -176,7 +176,7 @@
                  (is (if (= 0 mktdpth-bid) (< (count @(:market-bid @book)) max-size) true)) )
                (stop-server)
                (close channel)
-               (future-cancel matching-loop)
+               (map future-cancel matching-loop)
                ))
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
