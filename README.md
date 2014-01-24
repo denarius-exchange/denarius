@@ -1,6 +1,6 @@
 # Denarius
 
-[![Build Status](https://secure.travis-ci.org/analyticbastard/denarius.png?branch=master)](http://travis-ci.org/analyticbastard/denarius)
+[![Build Status](https://secure.travis-ci.org/denarius-exchange/denarius.png?branch=master)](http://travis-ci.org/denarius-exchange/denarius)
 
 Open-source financial exchange software.
 
@@ -30,7 +30,7 @@ To try out Denarius, start a development server with:
 lein run
 ```
 
-Then send orders to the server with the utility client ([See Wiki](https://github.com/analyticbastard/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
+Then send orders to the server with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
 
 ```Bash
 lein -m util.client/-main
