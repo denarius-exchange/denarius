@@ -1,2 +1,2 @@
-{:engine-threads 2 #_"In seconds"
+{:engine-threads 1 #_"Number of order-matching threads"
  }
