@@ -78,7 +78,7 @@
         order-10-1 (create-order-ref 1 broker-id type :bid size price-10 nil nil)
         order-10-2 (create-order-ref 2 broker-id type :bid size price-10 nil nil)
         order-20-1 (create-order-ref 3 broker-id type :bid size price-20 nil nil)
-        order-20-2 (create-order-ref 3 broker-id type :bid (* 3 size) price-20 nil nil)
+        order-20-2 (create-order-ref 4 broker-id type :bid (* 3 size) price-20 nil nil)
         asset-name "EURUSD"
         order-book (create-order-book asset-name)]
     (insert-order order-book order-10-1)

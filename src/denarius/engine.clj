@@ -11,7 +11,7 @@
   "Creates an order book instance with the asset name as metadata"
   (with-meta 
     (->Book (ref (sorted-map)) (ref (sorted-map))
-            (ref (list)) (ref (list)))
+            (ref (vector)) (ref (vector)))
     {:asset-name asset-name} ))
 
 (defn book-asset [^Book book]
@@ -41,14 +41,16 @@
 
 (defn market-depth
   ([^Book order-book side]
-    (map (fn [level]
-           [(key level) (apply + (map (comp :size deref) @(val level)) )])
-         @(side order-book)) )
+    (remove #(nil? %)
+           (map (fn [x] (if-not (empty? x)
+                        [(-> x first deref :price)
+                         (apply + (map #(-> % deref :size) x) )] ))
+                (map #(-> % deref vals ) (-> order-book side deref vals)))))
   ([^Book order-book side price]
     (let [side-ref (side order-book)
           level-ref (@side-ref price)]
       (if level-ref
-        (apply + (map (comp :size deref) @(@(side order-book) price)))
+        (apply + (map (comp :size deref val) @(@(side order-book) price)))
         0 )) ))
 
 (defn size-market-orders [^Book order-book side]
@@ -61,16 +63,17 @@
 
 (defmethod insert-order :limit [^Book book ^Order order-ref]
   "Insert an order into the book specified as argument"
-  (let [side      (:side @order-ref)
+  (let [order-id  (:order-id @order-ref)
+        side      (:side @order-ref)
         price     (:price @order-ref)
         side-ref  (side book)
         level-ref (@side-ref price)]
     (dosync 
       (if level-ref
-        (alter level-ref #(conj % order-ref ))
+        (alter level-ref #(assoc % order-id order-ref ))
         (do
-          (alter side-ref #(assoc % price (ref ()) ))
-          (alter (@side-ref price) #(conj % order-ref)) )))))
+          (alter side-ref #(assoc % price (ref (hash-map)) ))
+          (alter (@side-ref price) #(assoc % order-id order-ref)) )))))
 
 (defmethod insert-order :market [^Book book ^Order order-ref]
   (let [side     (:side @order-ref)
@@ -90,8 +93,8 @@
         level-ref (@side-ref price)
         pred      #(= (:order-id @%) order-id)]
     (if level-ref
-      (do
-        (dosync (alter level-ref #(remove pred %))) true ))))
+      ;(dosync (alter level-ref #(remove pred %))) true ))))
+      (dosync (alter level-ref #(dissoc % order-id))) true )))
 
 (defmethod remove-order :market [^Book book ^Order order-ref]
   "Remove an order from the book specified as argument"
@@ -178,7 +181,7 @@
         (let [level-ref (best-price-level-ref book matching-side price)]
           (if level-ref
             (if-not (empty? @level-ref)
-              (let [first-available-ref (last @level-ref)
+              (let [first-available-ref (second (last @level-ref))
                     first-available     @first-available-ref
                     available-size      (:size first-available)
                     size                (:size @order-ref)]
@@ -205,29 +208,30 @@
         mkt-mtch-ref  (mkt-mtch-side book)]
     (loop []
       (dosync
-        (let [best-lvl-ref (best-price-level-ref book matching-side)
-              level-ref  (if-not (empty? @mkt-mtch-ref)
-                           mkt-mtch-ref
-                           best-lvl-ref)]
-          (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
-            (let [first-available-ref (last @level-ref)
-                  first-available     @first-available-ref
-                  available-size      (:size first-available)
-                  size                (:size @order-ref)
-                  price               (:price @(first @best-lvl-ref))]
-              (cross first-available-ref order-ref (min available-size size) 
-                     price)
-              (if (> available-size size)
-                (do
-                  (alter first-available-ref update-in [:size] - size)
-                  (remove-order book order-ref))
-                (do
-                  (alter order-ref update-in [:size] - available-size)
-                  (alter first-available-ref update-in [:size] - available-size)
-                  (remove-order book first-available-ref)
-                  (if (= size available-size)
-                    (remove-order book order-ref)
-                    (recur )))))))))))
+        (let [best-lvl-ref (best-price-level-ref book matching-side)]
+          (if best-lvl-ref
+            (let [level    (if-not (empty? @mkt-mtch-ref)
+                             @mkt-mtch-ref 
+                             (-> @best-lvl-ref vals))]
+              (if (-> level empty? not)
+                (let [first-available-ref (last level)
+                      first-available     @first-available-ref
+                      available-size      (:size first-available)
+                      size                (:size @order-ref)
+                      price               (:price @(-> @best-lvl-ref vals first))]
+                  (cross first-available-ref order-ref (min available-size size) 
+                         price)
+                  (if (> available-size size)
+                    (do
+                      (alter first-available-ref update-in [:size] - size)
+                      (remove-order book order-ref))
+                    (do
+                      (alter order-ref update-in [:size] - available-size)
+                      (alter first-available-ref update-in [:size] - available-size)
+                      (remove-order book first-available-ref)
+                      (if (= size available-size)
+                        (remove-order book order-ref)
+                        (recur )))))))))))))
 
 (defn match-once [book cross]
   (let [market-ask (:market-ask book)
@@ -240,10 +244,10 @@
                         (if-not (empty? @market-bid)
                           (last @market-bid)
                           (if (> (apply + (map second (market-depth book :ask))) 0)
-                            (last @(best-price-level-ref book :ask))
+                            (second (last @(best-price-level-ref book :ask)))
                             nil)))]
         (if order-ref
-          (match-order book order-ref cross) )))))
+            (match-order book order-ref cross) )))))
 
 
 (defn start-matching-loop [book cross-function]
@@ -252,11 +256,12 @@
            id      1]
       (if (> id engine-threads)
         threads
-        (conj threads 
-              (future
-                (while true
-                  (do ;(java.lang.Thread/sleep 1)
-                    (try
-                      (match-once @book cross-function )
-                      (catch Exception e (println e) false)) ))))
+        (recur (conj threads 
+                     (future
+                       (while true
+                         (do ;(java.lang.Thread/sleep 1)
+                           (try
+                             (match-once @book cross-function )
+                             (catch Exception e (println e) false)) ))))
+               (inc id) )
         ))))
