@@ -36,7 +36,7 @@
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         port        denarius.tcp/port
         idle-time   500
-        idle-time-2 5000]
+        idle-time-2 9000]
     (start-matching-loop book cross-function)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
@@ -148,9 +148,7 @@
                                              req-order  (json/write-str {:req-type 1 :broker-id 1 :order-id order-id
                                                                          :order-type order-type :side side :size size
                                                                          :price price})]
-                                         ;(enqueue channel req-order)
-                                         (insert-order @book
-                                                       (create-order-ref order-id 1 order-type side size price nil nil))
+                                         (enqueue channel req-order)
                                          (recur (if-not (= (rand-int 2) 0) :bid :ask)
                                                 (inc requests)
                                                 (if (= side :bid)
