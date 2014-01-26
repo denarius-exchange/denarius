@@ -66,6 +66,8 @@
         side-ref  (side book)
         level-ref (@side-ref price)]
     (dosync 
+      (alter order-ref
+             #(vary-meta % assoc :epoch (java.lang.System/currentTimeMillis) )) 
       (if level-ref
         (alter level-ref #(conj % order-ref ))
         (do
@@ -77,6 +79,8 @@
         side-ref (order-market-side book side)
         cl       (class @side-ref)]
     (dosync
+      (alter order-ref
+             #(vary-meta % assoc :epoch (java.lang.System/currentTimeMillis) ))
       (alter side-ref #(conj % order-ref)) )))
 
 
@@ -236,13 +240,17 @@
         ask        (:ask book)
         bid        (:bid book)]
     (dosync
-      (let [order-ref (if-not (empty? @market-ask)
-                        (first @market-ask)
-                        (if-not (empty? @market-bid)
-                          (first @market-bid)
-                          (if (> (apply + (map second (market-depth book :ask))) 0)
-                            (first @(best-price-level-ref book :ask))
-                            nil)))]
+      (let [market-ask (first @market-ask)
+            market-bid (first @market-bid)
+            limit-ask  (if (> (apply + (map second (market-depth book :ask))) 0)
+                            (first @(best-price-level-ref book :ask)))
+            limit-bid  (if (> (apply + (map second (market-depth book :bid))) 0)
+                            (first @(best-price-level-ref book :bid)))
+            long-max   (java.lang.Long/MAX_VALUE)
+            slct-epch  (fn [x] (if x (-> @x meta :epoch) long-max))
+            order-mkt  (min-key slct-epch market-ask market-bid)
+            order-lmt  (min-key slct-epch limit-ask limit-bid)
+            order-ref  (if order-mkt order-mkt order-lmt)]
         (if order-ref
           (match-order book order-ref cross) )))))
 
