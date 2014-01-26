@@ -36,7 +36,8 @@
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         port        denarius.tcp/port
         idle-time   500
-        idle-time-2 9000]
+        idle-time-2 5000]
+    (start-matching-loop book cross-function)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
@@ -45,7 +46,6 @@
                                                 :order-type :limit :side :bid :size 1 :price 10})
                    stop-server (denarius.tcp/start-tcp book)
                    channel     (wait-for-result (tcp-client options))]
-               (start-matching-loop book cross-function)
                (enqueue channel req-ask)
                (enqueue channel req-bid)
                (Thread/sleep idle-time)
@@ -65,7 +65,6 @@
                                                 :order-type :limit :side :bid :size 2 :price 10})
                    stop-server (denarius.tcp/start-tcp book)
                    channel     (wait-for-result (tcp-client options))]
-               (start-matching-loop book cross-function)
                (enqueue channel req-ask-1)
                (enqueue channel req-bid-1)
                (enqueue channel req-ask-2)
@@ -120,7 +119,6 @@
                                                 (inc order-id) )
                                                ))))
                    total         (send-function)]
-               (start-matching-loop book cross-function)
                (Thread/sleep idle-time-2)
                (let [ask-total (:ask total)
                      bid-total (:bid total)]
@@ -150,7 +148,9 @@
                                              req-order  (json/write-str {:req-type 1 :broker-id 1 :order-id order-id
                                                                          :order-type order-type :side side :size size
                                                                          :price price})]
-                                         (enqueue channel req-order)
+                                         ;(enqueue channel req-order)
+                                         (insert-order @book
+                                                       (create-order-ref order-id 1 order-type side size price nil nil))
                                          (recur (if-not (= (rand-int 2) 0) :bid :ask)
                                                 (inc requests)
                                                 (if (= side :bid)
@@ -161,8 +161,7 @@
                                                   total-ask)
                                                 (inc order-id) )
                                          )))))
-                   total         (send-function)
-                   matching-loop (start-matching-loop book cross-function)]
+                   total         (send-function)]
                (Thread/sleep idle-time-2)
                (let [ask-total   (:ask total)
                      bid-total   (:bid total)
@@ -170,13 +169,11 @@
                      mktdpth-bid (market-depth @book :bid price)]
                  (is (= 0 (min mktdpth-ask mktdpth-bid)) )
                  (is (= (max (- bid-total ask-total) (- ask-total bid-total))
-                        (max (+ mktdpth-ask (size-market-orders @book :ask))
-                             (+ mktdpth-bid (size-market-orders @book :bid)) )))
+                        (max mktdpth-ask mktdpth-bid)))
                  (is (if (= 0 mktdpth-ask) (< (count @(:market-ask @book)) max-size) true))
                  (is (if (= 0 mktdpth-bid) (< (count @(:market-bid @book)) max-size) true)) )
                (stop-server)
                (close channel)
-               (map future-cancel matching-loop)
                ))
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
@@ -209,7 +206,6 @@
                                                   total-ask))
                                          )))))
                    total         (send-function)]
-               (start-matching-loop book cross-function)
                (Thread/sleep idle-time-2)
                (let [ask-total   (:ask total)
                      bid-total   (:bid total)
