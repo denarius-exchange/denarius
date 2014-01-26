@@ -193,7 +193,7 @@
                                      (if (>= requests max-requests)
                                        {:ask total-ask :bid total-bid}
                                        (let [order-type    (if (= (rand-int 5) 0) :market :limit) 
-                                             price         (+ (rand-int 10) (if (= size :bid) 5 10))
+                                             price         (+ (rand-int 10) (if (= size :bid) 5 12))
                                              size          (inc (rand-int 10))
                                              req-order  (json/write-str {:req-type 1 :broker-id 1 :order-id (get-order-id)
                                                                          :order-type order-type :side side 
@@ -218,8 +218,8 @@
                  (is (= 0 (min mktdpth-ask mktdpth-bid)) )
                  (is (if (= 0 mktdpth-ask) (= (count @(:market-ask @book)) 0) true))
                  (is (if (= 0 mktdpth-bid) (= (count @(:market-bid @book)) 0) true))
-                 (is (< (:price @(second (first @(best-price-level-ref @book :bid))))
-                        (:price @(second (first @(best-price-level-ref @book :ask)))))))
+                 (is (< (:price @(first @(best-price-level-ref @book :bid)))
+                        (:price @(first @(best-price-level-ref @book :ask))))))
                (stop-server)
                (close channel)
                ))
