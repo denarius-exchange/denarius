@@ -78,7 +78,7 @@
         order-10-1 (create-order-ref 1 broker-id type :bid size price-10 nil nil)
         order-10-2 (create-order-ref 2 broker-id type :bid size price-10 nil nil)
         order-20-1 (create-order-ref 3 broker-id type :bid size price-20 nil nil)
-        order-20-2 (create-order-ref 4 broker-id type :bid (* 3 size) price-20 nil nil)
+        order-20-2 (create-order-ref 3 broker-id type :bid (* 3 size) price-20 nil nil)
         asset-name "EURUSD"
         order-book (create-order-book asset-name)]
     (insert-order order-book order-10-1)
@@ -233,7 +233,7 @@
                (is (= 0 (count @(:market-bid order-book ))))
                (is (= 0 (count @(:market-ask order-book ))))
                (is (= 1 (market-depth order-book :ask price))) ))
-    (testing "Match with market orders and limit orders (incoming size 2 for 2 + 1)"
+    (testing "Match with market orders and limit orders (incoming size 2 for 1 + 2)"
              (let [order-book  (create-order-book asset-name)
                    order-bid-1 (create-order-ref order-id-1 broker-id type :bid size nil nil nil)
                    order-bid-2 (create-order-ref order-id-2 broker-id type-lmt :bid (* 2 size) 10 nil nil)
@@ -350,7 +350,7 @@
                                                 (+ total-ask size)
                                                 total-ask ))))))
                    time-test   (fn []
-                                 (let [time-increment 25]
+                                 (let [time-increment 5]
                                    (loop [time-counter 0]
                                      (if (> time-counter max-time)
                                        time-counter   ; exit failing
