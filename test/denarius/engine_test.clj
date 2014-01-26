@@ -309,13 +309,13 @@
                    order-bid-1 (create-order-ref order-id-1 broker-id type :bid size price nil nil)
                    order-bid-2 (create-order-ref order-id-2 broker-id type-lmt :bid (* 2 size) price nil nil)
                    order-ask-1 (create-order-ref order-id-3 broker-id type :ask (* 4 size) price nil nil)]
-               (insert-order order-book order-bid-1)
+               (insert-order order-book order-bid-1) (Thread/sleep 1)
                (insert-order order-book order-ask-1)
                (insert-order order-book order-bid-2)
-               (match-once order-book (fn [a b c d] nil))
+               (match-once order-book (fn [a b c d] nil ))
                (is (= 0 (count @(:market-bid order-book ))))
                (is (= 1 (count @(:market-ask order-book ))))
-               (is (= 0 (market-depth order-book :bid price))) ))
+               (is (= 2 (market-depth order-book :bid price))) ))
     ))
 
 

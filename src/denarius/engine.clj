@@ -210,17 +210,19 @@
         mkt-mtch-ref  (mkt-mtch-side book)]
     (loop []
       (dosync
-        (let [best-lvl-ref (best-price-level-ref book matching-side)
-              level-ref  (if-not (empty? @mkt-mtch-ref)
-                           mkt-mtch-ref
-                           best-lvl-ref)]
+        (let [best-lvl-mtc (best-price-level-ref book matching-side)
+              best-lvl-ref (if best-lvl-mtc best-lvl-mtc
+                             (best-price-level-ref book order-side))
+              level-ref    (if-not (empty? @mkt-mtch-ref)
+                             mkt-mtch-ref
+                             best-lvl-ref)]
           (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
             (let [first-available-ref (first @level-ref)
                   first-available     @first-available-ref
                   available-size      (:size first-available)
                   size                (:size @order-ref)
                   price               (:price @(first @best-lvl-ref))]
-              (cross first-available-ref order-ref (min available-size size) 
+              (cross order-ref first-available-ref (min available-size size) 
                      price)
               (if (> available-size size)
                 (do
