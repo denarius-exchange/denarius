@@ -11,6 +11,8 @@
 (def matching-agent (agent 1))
 
 (defn cross-function [order-ref-1 order-ref-2 size price]
+  "Function called on order-matching. Callbacks added to the vector
+   :on-matching will be called."
   ; first make changes persistent. If impossible, return false
   (future
     (let [more (:on-matching (meta @order-ref-1))]
@@ -23,6 +25,7 @@
 
 
 (defn start-brokering-interfaces []
+  "Starts the server for connecting to connector nodes"
   (info "Starting brokering interfaces")
   ;(denarius.http/start-http book))
   (denarius.tcp/start-tcp book))

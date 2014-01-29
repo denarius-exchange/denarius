@@ -35,16 +35,24 @@
         0 ))))
 
 (defn order-market-side [book side]
+  "Returns the market side book keys from a market order"
   (if (= side :ask)
     (:market-ask book)
     (:market-bid book) ))
 
 (defn market-depth
   ([^Book order-book side]
+    "Computes the market depth (all outstanding limit orders) for a
+     side of the book. This returns a list of vectors whose first entry
+     is the price and second is the aggregated size of all orders with
+     that price."
     (map (fn [level]
            [(key level) (apply + (map (comp :size deref) @(val level)) )])
          @(side order-book)) )
   ([^Book order-book side price]
+    "Computes the market depth (all outstanding limit orders) that remain
+     outstanding at the requested size with the requested price. It returns
+     the number of orders."
     (let [side-ref (side order-book)
           level-ref (@side-ref price)]
       (if level-ref
@@ -52,15 +60,19 @@
         0 )) ))
 
 (defn size-market-orders [^Book order-book side]
+  "Returns the aggregated size of the outstanding market orders at one side.
+   Notice that this is stable just in case there are no orders at the
+   opposite side."
   (apply + (map (comp :size deref) @(order-market-side order-book side)) ))
 
 
+; This is the dispatch function for insert-order, to distinguish by order type
 (def order-type-dispatch (fn [_ ^Order order-ref & more] (:type @order-ref)))
 
 (defmulti insert-order order-type-dispatch)
 
 (defmethod insert-order :limit [^Book book ^Order order-ref]
-  "Insert an order into the book specified as argument"
+  "Insert a limit order into the book specified as argument"
   (let [side      (:side @order-ref)
         price     (:price @order-ref)
         side-ref  (side book)
@@ -75,6 +87,7 @@
           (alter (@side-ref price) #(conj % order-ref)) )))))
 
 (defmethod insert-order :market [^Book book ^Order order-ref]
+  "Inserts a market order into the book"
   (let [side     (:side @order-ref)
         side-ref (order-market-side book side)
         cl       (class @side-ref)]
@@ -201,6 +214,9 @@
                       (recur  ))))))))))))
 
 (defmethod match-order :market [^Book book ^Order order-ref cross]
+  "Matches a market order, first trying to get a market oder at the other side
+   to match them both or, in case non exists, match again the best limit order
+   available."
   (let [order-id      (:order-id @order-ref)
         broker-id     (:broker-id @order-ref)
         order-side    (:side @order-ref)
@@ -237,6 +253,8 @@
                     (recur) ))))))))))
 
 (defn match-once [book cross]
+  "Selects the next order to be matched. Policy is: Choose the oldest market
+   order of either bid or ask side, and then select the oldest limit order."
   (let [market-ask (:market-ask book)
         market-bid (:market-bid book)
         ask        (:ask book)
@@ -258,6 +276,7 @@
 
 
 (defn start-matching-loop [book cross-function]
+  "Starts an infinite loop that will call match-once"
   (let [engine-threads (config :engine-threads)]
     (loop [threads []
            id      1]
