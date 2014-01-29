@@ -8,8 +8,6 @@
 
 (def book (ref (create-order-book "EUR")))
 
-(def matching-agent (agent 1))
-
 (defn cross-function [order-ref-1 order-ref-2 size price]
   "Function called on order-matching. Callbacks added to the vector
    :on-matching will be called."
