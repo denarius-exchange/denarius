@@ -3,8 +3,7 @@
         gloss.core
         aleph.tcp)
   (:require [clojure.tools.cli :refer [parse-opts]]
-            [clojure.data.json :as json]
-            denarius.connector-node)
+            [clojure.data.json :as json])
   (:gen-class))
 
 
@@ -36,7 +35,7 @@
 (def program-options
   ;; An option with a required argument
   [["-p" "--port PORT" "Port number"
-    :default denarius.connector-node/default-connector-port
+    :default 7891
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-h" "--host HOST" "Host, either host name or IP address"
