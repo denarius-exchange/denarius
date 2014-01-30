@@ -25,9 +25,10 @@
         cross      (fn [order-in-book order-incoming size price]
                      (dosync (ref-set last-price [price size])))
         options    {:host "localhost",
-                    :port 8080,
+                    :port 7891,
                     :frame (string :utf-8 :delimiters ["\r\n"])}
-        asset-name "EURUSD"]
+        asset-name "EURUSD"
+        port       7891]
     (testing "Two limit orders sent to the HTTP server. Check if they exist on the book"
              (let [order-book     (ref (create-order-book asset-name))
                    matching-agent (agent 1)
@@ -37,7 +38,7 @@
                    req-bid        (json/write-str {:req-type 1 :broker-id 1 :order-id 2 
                                                    :order-type :limit 
                                                    :side :bid :size 3 :price 10})
-                   stop-tcp   (start-tcp order-book)
+                   stop-tcp   (start-tcp order-book port)
                    channel    (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)

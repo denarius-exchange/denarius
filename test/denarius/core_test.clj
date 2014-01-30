@@ -6,7 +6,8 @@
         aleph.tcp
         denarius.order
         denarius.core
-        denarius.engine)
+        denarius.engine
+        denarius.engine-node)
   (:require clojure.tools.logging
             [clojure.data.json :as json]
             denarius.tcp))
@@ -32,9 +33,9 @@
         last-price (ref nil)
         asset-name "EURUSD"
         options    {:host "localhost",
-                    :port 8080,
+                    :port 7891,
                     :frame (string :utf-8 :delimiters ["\r\n"])}
-        port        denarius.tcp/port
+        port        denarius.engine-node/default-port
         idle-time   500
         idle-time-2 9000]
     (start-matching-loop book cross-function)
@@ -44,7 +45,7 @@
                                                 :order-type :limit :side :ask :size 1 :price 10})
                    req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book)
+                   stop-server (denarius.tcp/start-tcp book port)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -63,7 +64,7 @@
                                                :order-type :limit  :side :bid :size 2 :price 10})
                    req-bid-2   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-4
                                                 :order-type :limit :side :bid :size 2 :price 10})
-                   stop-server (denarius.tcp/start-tcp book)
+                   stop-server (denarius.tcp/start-tcp book port)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask-1)
                (enqueue channel req-bid-1)
@@ -81,7 +82,7 @@
                                                 :order-type :limit :side :ask :size 2 :price 10})
                    req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book)
+                   stop-server (denarius.tcp/start-tcp book port)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -92,7 +93,7 @@
                (stop-server) ))
     (testing "Bulk test: Send 1000 random-side limit orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book)
+             (let [stop-server   (denarius.tcp/start-tcp book port)
                    max-requests  100
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []
@@ -128,7 +129,7 @@
                ))
     (testing "Bulk test: Send 1000 random-side limit AND market orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book)
+             (let [stop-server   (denarius.tcp/start-tcp book port)
                    max-requests  1000
                    max-size      10
                    channel       (wait-for-result (tcp-client options))
@@ -175,7 +176,7 @@
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book)
+             (let [stop-server   (denarius.tcp/start-tcp book port)
                    max-requests  1000
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []
