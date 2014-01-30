@@ -8,8 +8,6 @@
   (:require [clojure.data.json :as json]))
 
 
-(def port 8080)
-
 (def book (ref nil))
 
 (defn inform-match [channel]
@@ -48,7 +46,7 @@
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 
 
-(defn start-tcp [order-book]
+(defn start-tcp [order-book port]
   (dosync (ref-set book @order-book))
   (start-tcp-server handler 
                     {:port port
