@@ -19,7 +19,7 @@
                                :size size
                                :price price})) )))
 
-(defn handler [channel broker-id]
+(defn handler [channel channel-info]
   (receive-all channel
                (fn [req]
                  (let [req-params (for [l [:req-type
