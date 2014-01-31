@@ -16,6 +16,7 @@
       (enqueue channel 
                (json/json-str {:msg-type 1
                                :order-id (:order-id @order-ref-1)
+                               :broker-id (:broker-id @order-ref-1)
                                :size size
                                :price price})) )))
 

@@ -54,7 +54,7 @@
 
 (defmethod start-denarius "connector" [options args]
   (info "Running Denarius Connector")
-  (start-connector args) )
+  (start-connector options args) )
 
 (defn -main [& args]
   (let [{:keys [options arguments errors summary]} (parse-opts args 
