@@ -7,7 +7,7 @@ Open-source financial exchange software.
 ## Status
 
 - A matching engine that implements market and limit orders.
-- An HTTP/JSON backend server for receiving oders
+- An TCP/JSON backend server for receiving oders
 
 ## ToDo (Immediately)
 
