@@ -24,17 +24,24 @@ Open-source financial exchange software.
 
 Currently there are no binaries to this software.
 
-To try out Denarius, start a development server with:
-
+To try out Denarius, start the matching engine component with:
 ```Bash
 lein run
 ```
 
-Then send orders to the server with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
+Optionally, start one (or more) connector component with
+```Bash
+lein run -c connector
+```
+
+Then send orders to the connector with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
 
 ```Bash
-lein -m util.client/-main
+lein run -m util.client/-main
 ```
+
+In this scenario, the utility client plays the role of trading desk ([See Architecture](https://github.com/denarius-exchange/denarius/wiki/Architecture)).
+You can send orders directly to the engine, since the protocol is the same.
 
 If you want to make your own client API, you can follow the code in the
 utility client.
