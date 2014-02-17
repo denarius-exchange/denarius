@@ -10,6 +10,7 @@
 
 (def book (ref nil))
 
+
 (defn inform-match [channel]
   (fn [order-ref-1 order-ref-2 size price]
     (if-not (nil? channel)

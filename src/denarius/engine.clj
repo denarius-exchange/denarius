@@ -66,12 +66,12 @@
   (apply + (map (comp :size deref) @(order-market-side order-book side)) ))
 
 
-; This is the dispatch function for insert-order, to distinguish by order type
+; This is the dispatch function for insert-order-impl, to distinguish by order type
 (def order-type-dispatch (fn [_ ^Order order-ref & more] (:type @order-ref)))
 
-(defmulti insert-order order-type-dispatch)
+(defmulti insert-order-impl order-type-dispatch)
 
-(defmethod insert-order :limit [^Book book ^Order order-ref]
+(defmethod insert-order-impl :limit [^Book book ^Order order-ref]
   "Insert a limit order into the book specified as argument"
   (let [side      (:side @order-ref)
         price     (:price @order-ref)
@@ -86,7 +86,7 @@
           (alter side-ref #(assoc % price (ref []) ))
           (alter (@side-ref price) #(conj % order-ref)) )))))
 
-(defmethod insert-order :market [^Book book ^Order order-ref]
+(defmethod insert-order-impl :market [^Book book ^Order order-ref]
   "Inserts a market order into the book"
   (let [side     (:side @order-ref)
         side-ref (order-market-side book side)
@@ -275,18 +275,24 @@
           (match-order book order-ref cross) )))))
 
 
-(defn start-matching-loop [book cross-function]
-  "Starts an infinite loop that will call match-once"
-  (let [engine-threads (config :engine-threads)]
-    (loop [threads []
-           id      1]
-      (if (> id engine-threads)
-        threads
-        (conj threads 
-              (future
-                (while true
-                  (do ;(java.lang.Thread/sleep 1)
-                    (try
-                      (match-once @book cross-function )
-                      (catch Exception e (println e) false)) ))))
-        ))))
+(defn get-insert-order [f-impl cross-function]
+  (fn [^Book book ^Order order-ref]
+    (f-impl book order-ref)
+    (match-once book cross-function)
+  ))
+
+
+(defn cross-function [order-ref-1 order-ref-2 size price]
+  "Function called on order-matching. Callbacks added to the vector
+   :on-matching will be called."
+  ; first make changes persistent. If impossible, return false
+  (future
+    (let [more (:on-matching (meta @order-ref-1))]
+      (doall (map #(% order-ref-1 order-ref-2 size price) more)) )
+    (let [more (:on-matching (meta @order-ref-2))]
+      (doall (map #(% order-ref-2 order-ref-1 size price) more)) )
+    )
+  ; return true on no error
+  true)
+
+(def insert-order (get-insert-order insert-order-impl cross-function))
