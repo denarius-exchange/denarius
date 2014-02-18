@@ -123,8 +123,7 @@
 (defn best-price-level-ref
   ([book side]
     "Compute the best price available for an order of the side
-     specified as argument. This searches the opposite site for
-     the best price available."
+     specified as argument."
     (let [side-ref         (side book)
           minmax           (if (= side :ask) min max) 
           cmp              (if (= side :ask) < >) 
@@ -231,7 +230,7 @@
                              (best-price-level-ref book order-side))
               level-ref    (if-not (empty? @mkt-mtch-ref)
                              mkt-mtch-ref
-                             best-lvl-ref)]
+                             best-lvl-mtc)]
           (if (and level-ref best-lvl-ref (-> @level-ref empty? not))
             (let [first-available-ref (first @level-ref)
                   first-available     @first-available-ref
@@ -260,26 +259,36 @@
         ask        (:ask book)
         bid        (:bid book)]
     (dosync
-      (let [market-ask (first @market-ask)
-            market-bid (first @market-bid)
-            limit-ask  (if (> (apply + (map second (market-depth book :ask))) 0)
-                            (first @(best-price-level-ref book :ask)))
-            limit-bid  (if (> (apply + (map second (market-depth book :bid))) 0)
-                            (first @(best-price-level-ref book :bid)))
-            long-max   (java.lang.Long/MAX_VALUE)
-            slct-epch  (fn [x] (if x (-> @x meta :epoch) long-max))
-            order-mkt  (min-key slct-epch market-ask market-bid)
-            order-lmt  (min-key slct-epch limit-ask limit-bid)
-            order-ref  (if order-mkt order-mkt order-lmt)]
-        (if order-ref
-          (match-order book order-ref cross) )))))
+        (let [market-ask (first @market-ask)
+              market-bid (first @market-bid)
+              limit-ask  (if (> (apply + (map second (market-depth book :ask))) 0)
+                           (first @(best-price-level-ref book :ask)))
+              limit-bid  (if (> (apply + (map second (market-depth book :bid))) 0)
+                           (first @(best-price-level-ref book :bid)))
+              long-max   (java.lang.Long/MAX_VALUE)
+              slct-epch  (fn [x] (if x (-> @x meta :epoch) long-max))
+              order-mkt  (min-key slct-epch market-ask market-bid)
+              order-lmt  (min-key slct-epch limit-ask limit-bid)
+              order-ref  (if order-mkt order-mkt order-lmt)]
+          (if order-ref
+            (match-order book order-ref cross)
+            false))
+         )))
+
+
+(defn match-many [book cross]
+  "Starts an infinite loop that will call match-once"
+  (let [engine-threads (config :engine-threads)]
+    (loop []
+      (if (match-once book cross )
+        (recur) ))))
 
 
 (defn get-insert-order [f-impl cross-function]
   (fn [^Book book ^Order order-ref]
     (f-impl book order-ref)
-    (match-once book cross-function)
-  ))
+    (match-many book cross-function)
+    ))
 
 
 (defn cross-function [order-ref-1 order-ref-2 size price]

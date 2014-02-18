@@ -38,7 +38,6 @@
         port        denarius.engine-node/default-port
         idle-time   500
         idle-time-2 9000]
-    (start-matching-loop book cross-function)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
