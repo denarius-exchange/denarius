@@ -341,9 +341,10 @@
                                          price      10
                                          order      (create-order-ref order-id broker-id :limit 
                                                                       side size price nil callback)]
-                                     (async/>!! async-ch 1) ; we need to unblock the loop 
-                                     (future
-                                       (insert-order order-book order) )
+                                     (async/thread
+                                       (insert-order order-book order)
+                                       (async/>!! async-ch 1) ; we need to unblock the loop 
+                                       )
                                      (if (> order-id total-num)
                                        [total-bid total-ask]
                                        (recur (inc order-id)
