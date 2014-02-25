@@ -46,7 +46,8 @@
                                                           nil [(inform-match channel)])]
                          (insert-order @book order-ref)
                          ; We unlock the matching loop
-                         (async/go (async/>! @async-channel 1) )))
+                         (async/go (async/>! @async-channel 1)) ; duplicate??
+                         (async/go (async/>! @async-channel 1)) ))
                    ; return response 
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 
