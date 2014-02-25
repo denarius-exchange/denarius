@@ -2,7 +2,8 @@
   (:use clojure.core
         clojure.test
         denarius.order
-        denarius.engine))
+        denarius.engine)
+  (:require [clojure.core.async :as async]))
 
 
 (deftest test-create-book
@@ -330,6 +331,7 @@
              (let [order-book  (create-order-book asset-name)
                    total-num   1000
                    max-time    10000
+                   async-ch    (async/chan)
                    order-loop  (fn []
                                  (loop [order-id  1
                                         total-bid 0
@@ -339,7 +341,10 @@
                                          price      10
                                          order      (create-order-ref order-id broker-id :limit 
                                                                       side size price nil callback)]
-                                     (insert-order order-book order) 
+                                     (future
+                                       (insert-order order-book order)
+                                       (async/>!! async-ch 1) ; we need to unblock the loop 
+                                       )
                                      (if (> order-id total-num)
                                        [total-bid total-ask]
                                        (recur (inc order-id)
@@ -360,7 +365,7 @@
                                            (Thread/sleep time-increment)
                                            (recur (+ time-counter time-increment)) ))))))]
                (order-loop)
-               (start-matching-loop (ref order-book) cross)
+               (start-matching-loop (ref order-book) cross async-ch)
                (Thread/sleep 50)
                (let [time-taken (time-test)]
                  (println "Time taken:" time-taken)

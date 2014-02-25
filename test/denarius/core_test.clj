@@ -10,6 +10,7 @@
         denarius.engine-node)
   (:require clojure.tools.logging
             [clojure.data.json :as json]
+            [clojure.core.async :as async]
             denarius.tcp))
 
 (defmacro bench
@@ -37,15 +38,16 @@
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         port        denarius.engine-node/default-port
         idle-time   500
-        idle-time-2 9000]
-    (start-matching-loop book cross-function)
+        idle-time-2 9000
+        async-ch    (async/chan)]
+    (start-matching-loop book cross-function async-ch)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
                                                 :order-type :limit :side :ask :size 1 :price 10})
                    req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port)
+                   stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -64,7 +66,7 @@
                                                :order-type :limit  :side :bid :size 2 :price 10})
                    req-bid-2   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-4
                                                 :order-type :limit :side :bid :size 2 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port)
+                   stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask-1)
                (enqueue channel req-bid-1)
@@ -82,7 +84,7 @@
                                                 :order-type :limit :side :ask :size 2 :price 10})
                    req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port)
+                   stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -93,7 +95,7 @@
                (stop-server) ))
     (testing "Bulk test: Send 1000 random-side limit orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port)
+             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
                    max-requests  100
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []
@@ -120,6 +122,9 @@
                                                ))))
                    total         (send-function)]
                (Thread/sleep idle-time-2)
+               ; ATTENTION!!!
+               (dotimes [i 10]  ; there is a little remainder of unprocessed options, we need to free the loop. WHY????
+                  (async/go (async/>! async-ch 1) ))
                (let [ask-total (:ask total)
                      bid-total (:bid total)]
                      (is (= (max 0 (- bid-total ask-total)) (market-depth @book :bid price)))
@@ -129,7 +134,7 @@
                ))
     (testing "Bulk test: Send 1000 random-side limit AND market orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port)
+             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
                    max-requests  1000
                    max-size      10
                    channel       (wait-for-result (tcp-client options))
@@ -176,7 +181,7 @@
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port)
+             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
                    max-requests  1000
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []

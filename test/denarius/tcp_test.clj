@@ -6,7 +6,8 @@
         denarius.order
         denarius.engine
         denarius.tcp)
-  (:require [clojure.data.json :as json]) )
+  (:require [clojure.data.json :as json]
+            [clojure.core.async :as async]) )
 
 
 (deftest test-http
@@ -38,7 +39,8 @@
                    req-bid        (json/write-str {:req-type 1 :broker-id 1 :order-id 2 
                                                    :order-type :limit 
                                                    :side :bid :size 3 :price 10})
-                   stop-tcp   (start-tcp order-book port)
+                   async-ch   (async/chan)
+                   stop-tcp   (start-tcp order-book port async-ch)
                    channel    (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
