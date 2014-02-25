@@ -122,6 +122,9 @@
                                                ))))
                    total         (send-function)]
                (Thread/sleep idle-time-2)
+               ; ATTENTION!!!
+               (dotimes [i 10]  ; there is a little remainder of unprocessed options, we need to free the loop. WHY????
+                  (async/go (async/>! async-ch 1) ))
                (let [ask-total (:ask total)
                      bid-total (:bid total)]
                      (is (= (max 0 (- bid-total ask-total)) (market-depth @book :bid price)))
