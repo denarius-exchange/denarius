@@ -1,6 +1,7 @@
 (ns denarius.engine
   (:use denarius.order
         carica.core)
+  (:require [clojure.core.async :as async])
   (:import [denarius.order Order]) )
 
 ; Order book record
@@ -275,18 +276,11 @@
           (match-order book order-ref cross) )))))
 
 
-(defn start-matching-loop [book cross-function]
+(defn start-matching-loop [book cross-function async-ch]
   "Starts an infinite loop that will call match-once"
-  (let [engine-threads (config :engine-threads)]
-    (loop [threads []
-           id      1]
-      (if (> id engine-threads)
-        threads
-        (conj threads 
-              (future
-                (while true
-                  (do ;(java.lang.Thread/sleep 1)
-                    (try
-                      (match-once @book cross-function )
-                      (catch Exception e (println e) false)) ))))
-        ))))
+  (future 
+    (while true ;(java.lang.Thread/sleep 1)
+      (async/<!! async-ch)  ; block here until inserting order
+      (try
+        (match-once @book cross-function )
+        (catch Exception e (println e) false)) )))

@@ -5,10 +5,12 @@
         gloss.core
         denarius.order
         denarius.engine)
-  (:require [clojure.data.json :as json]))
+  (:require [clojure.data.json :as json]
+            [clojure.core.async :as async]))
 
 
 (def book (ref nil))
+(def async-channel (ref nil))
 
 (defn inform-match [channel]
   (fn [order-ref-1 order-ref-2 size price]
@@ -42,13 +44,16 @@
                      1 (let [order-ref  (create-order-ref order-id broker-id
                                                           order-type side size price 
                                                           nil [(inform-match channel)])]
-                         (insert-order @book order-ref) ))
+                         (insert-order @book order-ref)
+                         ; We unlock the matching loop
+                         (async/go (async/>! @async-channel 1) )))
                    ; return response 
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 
 
-(defn start-tcp [order-book port]
+(defn start-tcp [order-book port async-ch]
   (dosync (ref-set book @order-book))
+  (dosync (ref-set async-channel async-ch))
   (start-tcp-server handler 
                     {:port port
                      :frame (string :utf-8 

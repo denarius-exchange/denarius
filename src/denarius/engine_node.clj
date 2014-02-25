@@ -5,6 +5,7 @@
         denarius.engine)
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
+            [clojure.core.async :as async]
             denarius.tcp))
 
 
@@ -33,16 +34,17 @@
   true)
 
 
-(defn start-brokering-interfaces [port]
+(defn start-brokering-interfaces [port async-ch]
   "Starts the server for connecting to connector nodes"
   (info "Starting brokering interfaces")
   ;(denarius.http/start-http book))
-  (denarius.tcp/start-tcp book port))
+  (denarius.tcp/start-tcp book port async-ch))
 
 
 (defn start-engine [args]
   (let [{:keys [options arguments errors summary]} (parse-opts args 
                                                                engine-options)
-        port (:port options)]
-    (start-brokering-interfaces port)
-    (start-matching-loop book cross-function) ))
+        port     (:port options)
+        async-ch (async/chan 1000)] ; get the number by config
+    (start-brokering-interfaces port async-ch)
+    (start-matching-loop book cross-function async-ch) ))
