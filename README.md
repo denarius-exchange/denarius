@@ -9,11 +9,6 @@ Open-source financial exchange software.
 - A matching engine that implements market and limit orders.
 - An TCP/JSON backend server for receiving oders
 
-## ToDo (Immediately)
-
-- Asset properties handling
-- Customer/Broker Desks account handling
-
 ## Dependencies
 
 - Aleph/Lamina/Gloss
@@ -34,14 +29,27 @@ Optionally, start one (or more) connector component with
 lein run -c connector
 ```
 
-Then send orders to the connector with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
+Then send orders directly to the engine with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
 
 ```Bash
 lein run -m util.client/-main
 ```
 
-In this scenario, the utility client plays the role of trading desk ([See Architecture](https://github.com/denarius-exchange/denarius/wiki/Architecture)).
-You can send orders directly to the engine, since the protocol is the same.
+In this scenario, the utility client plays the role of trading desk and connector ([See Architecture](https://github.com/denarius-exchange/denarius/wiki/Architecture)), sending orders directly to the engine.
+You can send orders to the connector by specifying the connector port (default 7892) since the protocol is the same that the engine's. If the connector is on localhost we can omit the host parameter:
+
+```Bash
+lein -m util.client -p 7892
+```
+
+The default component to be started with ```lein run``` is the engine, so that it is equivalent to ```lein run -c engine```.
+For these and more options, see the help menu of each component by specifying the --help option:
+
+```Bash
+lein run --help
+lein run -c connector --help
+lein run -m util.client --help
+```
 
 If you want to make your own client API, you can follow the code in the
 utility client.
@@ -49,6 +57,10 @@ utility client.
 The server now informs about (partial) order execution, on every execution
 it makes, with the communications channel registered upon order entry. 
 
+## ToDo (Immediately)
+
+- Asset properties handling
+- Customer/Broker Desks account handling
 
 ## Contact
 
