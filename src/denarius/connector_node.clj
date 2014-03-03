@@ -5,7 +5,8 @@
         gloss.core)
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [denarius.connector.db :as db]))
 
 
 (def default-connector-port 7892)
@@ -23,18 +24,23 @@
 
 
 (defn build-position [data]
-  (let [order-map (json/read-str data :key-fn keyword)
-        msg-type  (:msg-type order-map)
-        broker-id (:broker-id order-map)
-        order-id  (:order-id order-map)
-        size      (:size order-map)
-        price     (:price order-map)
-        ch-brkr   (@channels broker-id)]
+  (let [order-map   (json/read-str data :key-fn keyword)
+        msg-type    (:msg-type    order-map)
+        broker-id-1 (:broker-id-1 order-map)
+        order-id-1  (:order-id-1  order-map)
+        broker-id-2 (:broker-id-2 order-map)
+        order-id-2  (:order-id-2  order-map)
+        size        (:size        order-map)
+        price       (:price       order-map)
+        ch-brkr     (@channels broker-id-1)]
     (if (= 1 msg-type)
       (do
         (if ch-brkr
           (do
-            (enqueue ch-brkr data) ))
+            (db/insert broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
+            (enqueue ch-brkr (json/write-str {:msg-type 2 :broker-id broker-id-1
+                                              :order-id order-id-1 :size size
+                                              :price price}) ) ))
         ))))
 
 
