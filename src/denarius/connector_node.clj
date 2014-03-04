@@ -6,7 +6,9 @@
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
-            [denarius.connector.db :as db]))
+            [denarius.connector.db :as db]
+            [denarius.connector.db.mockdb])
+  (:import [denarius.connector.db.mockdb mockdb]) )
 
 
 (def default-connector-port 7892)
@@ -103,4 +105,5 @@
         e-port (:engine-port options)
         e-host (:host options)
         e-chnl (create-back-channel e-host e-port)]
+    (reset! db/dbname (denarius.connector.db.mockdb/mockdb.))
     (start-front-server port e-host e-port e-chnl) ))

@@ -1,31 +1,25 @@
 (ns denarius.connector.db)
 
-; We load the implementations from here
-;(load "cassandra")
+
+(defprotocol db-proto
+  (init-impl [this])
+  (insert-impl [this broker-id-1 order-id-1 broker-id-2 order-id-2 size price])
+  (stop-impl [this]))
+
+
+(defrecord nildb []
+  db-proto
+  (init-impl [this] nil)
+  (insert-impl [this broker-id-1 order-id-1 broker-id-2 order-id-2 size price] nil)
+  (stop-impl [this] nil))
+
 
 ; Database name to be set via configuration
-(def dbname (ref nil))
+(def dbname (atom (nildb.)))
 
 
-(defn dbname-dispatch [dbname & _] dbname)
-
-(defmulti init-impl dbname-dispatch)
-
-(defmethod init-impl nil [dbname] nil)
-
-(defmulti insert-impl dbname-dispatch)
-
-(defmethod insert-impl nil [dbname broker-id-1 order-id-1 broker-id-2 order-id-2 size price]
-  nil )
-
-
-(defmulti stop-impl dbname-dispatch)
-
-(defmethod stop-impl nil [dbname] nil)
-
-
-
-; Methods exposed by 
+; Methods exposed by the namespace which encapsulate the multimethods and provide
+; the dispatching first argument depending on the reference dbname
 (defn init [] (init-impl @dbname) )
 
 (defn insert [broker-id-1 order-id-1 broker-id-2 order-id-2 size price]
