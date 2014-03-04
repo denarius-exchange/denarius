@@ -40,6 +40,10 @@
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-h" "--host HOST" "Host, either host name or IP address"
     :default "localhost"]
+   ["-i" "--id ID" "Broker ID. Numeric."
+    :default 1
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ;; A boolean option defaulting to nil
    ["-?" "--help" "Show help"]])
 
@@ -85,12 +89,12 @@
         (print-response order-id side price) ))))
 
 
-(defn send-order [channel order-id opt]
+(defn send-order [channel broker-id order-id opt]
   (let [side       (if (:ask opt) :ask :bid)
         order-type (if (:market opt) :market :limit)
         price      (:price opt)
         size       (:size opt)
-        order-map  {:req-type 1 :broker-id 1 :order-id order-id
+        order-map  {:req-type 1 :broker-id broker-id :order-id order-id
                     :order-type order-type :side side :size size :price price}
         order-str  (json/write-str order-map)]
     (print-order order-id order-type side size price)
@@ -100,7 +104,7 @@
 (defn exit? [x] (or (= "exit" x)
                     (= "quit" x)))
 
-(defn input [channel]
+(defn input [channel broker-id]
   (loop [order-id 1]
     (print "> ")
     (flush)
@@ -116,7 +120,7 @@
               opt     (:options params)]
           (case command
             "help"     (show-commands (second line))
-            "send"     (send-order channel order-id opt)
+            "send"     (send-order channel broker-id order-id opt)
             "position" (println "CURRENT NET POSITION: " @position)
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
@@ -127,6 +131,7 @@
   (let [params  (parse-opts args program-options)
         options (:options params)
         help    (:help options)
+        brid    (:id   options)
         host    (:host options)
         port    (:port options)]
     (if help
@@ -136,4 +141,4 @@
                      :frame (string :utf-8 :delimiters ["\r\n"])}
             channel (wait-for-result (tcp-client tcp-opt))]
         (receive-all channel build-position)
-        (input channel)))) )
+        (input channel brid)))) )
