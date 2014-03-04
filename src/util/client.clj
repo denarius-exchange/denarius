@@ -99,7 +99,7 @@
         price     (:price order-map)]
     (if (= 2 msg-type)
       (let [side (first (keep #(if (= order-id (:order-id %)) (:side %)) @orders))]
-        (dosync (alter position (if (= :ask side) (partial - size) (partial + size))))
+        (dosync (alter position (if (= :ask side) #(- % size) (partial + size))))
         (print-response order-id side price) ))))
 
 
