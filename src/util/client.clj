@@ -55,6 +55,7 @@
   (println "send\t\tSend an order to the server\n"
            "position\tShow net position\n"
            "help\t\tShow this help\n"
+           "history\tShow sent order history\n"
            "exit\t\tQuit program (also quit)\n") )
 
 (defmethod show-commands "send" [command]
@@ -76,6 +77,19 @@
 (defn print-response [order-id side price]
   (println "Your " (if (= :ask side) "SELLING" "BUYING") (str "order with ID=" order-id)
            "has been executed at price" price))
+
+(defn print-history [orders]
+  (loop [order-list orders]
+    (if-not (empty? order-list)
+      (let [order      (first order-list)
+            broker-id  (:broker-id order)
+            order-id   (:order-id order)
+            order-type (:order-type order)
+            side       (:side order)
+            size       (:size order)]            
+        (println "Broker ID=" broker-id " Order ID=" order-id
+                 " Type=" order-type " Side=" side " Size=" size)
+        (recur (rest order-list)) ))))
 
 (defn build-position [data]
   (let [order-map (json/read-str data :key-fn keyword)
@@ -122,6 +136,8 @@
             "help"     (show-commands (second line))
             "send"     (send-order channel broker-id order-id opt)
             "position" (println "CURRENT NET POSITION: " @position)
+            "history"  (print-history @orders)
+            ""         nil
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
           (recur (inc order-id) ))))))
@@ -141,4 +157,5 @@
                      :frame (string :utf-8 :delimiters ["\r\n"])}
             channel (wait-for-result (tcp-client tcp-opt))]
         (receive-all channel build-position)
+        (println "DENARIUS UTILITY TEST CLIENT\nSee Denarius' Wiki\nUse help for commands")
         (input channel brid)))) )
