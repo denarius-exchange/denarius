@@ -1,6 +1,5 @@
 (ns denarius.engine
-  (:use denarius.order
-        carica.core)
+  (:use denarius.order)
   (:require [clojure.core.async :as async])
   (:import [denarius.order Order]) )
 
