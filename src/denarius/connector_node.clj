@@ -2,13 +2,14 @@
   (:use [clojure.tools.logging :only [info]]
         lamina.core
         aleph.tcp
-        gloss.core)
+        gloss.core
+        [carica.core])
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
             [denarius.connector.db :as db]
-            [denarius.connector.db.mockdb])
-  (:import [denarius.connector.db.mockdb mockdb]) )
+            )
+  (:import [denarius.connector.db nildb]) )
 
 
 (def default-connector-port 7892)
@@ -22,7 +23,10 @@
    ["-e" "--engine-port PORT" "Engine port number to connect to"
     :default denarius.engine-node/default-port
     :parse-fn #(Integer/parseInt %)
-    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]])
+    :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
+   ["-d" "--database-class CLASSNAME" "Full path of the database driver class to use. Must be present in the classpath."
+    :default "denarius.connector.db.nildb"
+    :validate [#(not (empty? %)) "Must be not empty"]]])
 
 
 (defn build-position [data]
@@ -104,6 +108,16 @@
         port   (:port prog-opt)
         e-port (:engine-port options)
         e-host (:host options)
+        dbopt  (:database-class options)
+        dbpath (if (= dbopt "denarius.connector.db.nildb") 
+                 (config :connector :database-class) dbopt)
+        dbsplt (clojure.string/split dbpath #"\.+")
+        dbname (last dbsplt)
+        dbpspl (keep-indexed (fn [i x] (if (< (+ i 1) (count dbsplt)) x)) dbsplt)
+        dbpkg  (clojure.string/join "." dbpspl)
         e-chnl (create-back-channel e-host e-port)]
-    (reset! db/dbname (denarius.connector.db.mockdb/mockdb.))
+    ; Set the driver class for the database system to use it
+    (require (eval `(symbol ~dbpkg)))
+    (import [(eval `(symbol dbpkg) `(symbol dbname))])
+    (reset! db/dbname (eval `(new ~(symbol dbpath))))
     (start-front-server port e-host e-port e-chnl) ))

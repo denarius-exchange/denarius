@@ -1,2 +1,4 @@
-{:engine-threads 1 #_"Number of order-matching threads"
+{
+ :engine {}
+ :connector {:database-class "denarius.connector.db.mockdb.mockdb"}
  }
