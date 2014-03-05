@@ -44,6 +44,7 @@ lein -m util.client -p 7892
 
 The default component to be started with ```lein run``` is the engine, so that it is equivalent to ```lein run -c engine```.
 For these and more options, see the help menu of each component by specifying the --help option:
+For examples on how to use the utility client, see the [Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line).
 
 ```Bash
 lein run --help
@@ -57,16 +58,13 @@ utility client.
 The server now informs about (partial) order execution, on every execution
 it makes, with the communications channel registered upon order entry. 
 
-## ToDo (Immediately)
-
-- Asset properties handling
-- Customer/Broker Desks account handling
-
 ## Contact
 
 Mailing list (important announcements): denarius@librelist.com
 
 General announcements: http://machinomics.blogspot.com
+
+Feel free to contact the authors about bugs or improvements.
 
 ## License
 
