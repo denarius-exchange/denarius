@@ -107,10 +107,13 @@
         order-id  (:order-id order-map)
         size      (:size order-map)
         price     (:price order-map)]
-    (if (= tcp/message-response-executed msg-type)
-      (let [side (first (keep #(if (= order-id (:order-id %)) (:side %)) @orders))]
-        (dosync (alter position (if (= :ask side) #(- % size) (partial + size))))
-        (print-response order-id side price) ))))
+    (condp = msg-type
+      tcp/message-response-received nil
+      tcp/message-response-executed (let [side (first (keep #(if (= order-id (:order-id %)) 
+                                                               (:side %)) @orders))]
+                                      (dosync (alter position (if (= :ask side) #(- % size) 
+                                                                (partial + size))))
+                                      (print-response order-id side price) ))))
 
 
 (defn send-order [channel broker-id order-id opt]
