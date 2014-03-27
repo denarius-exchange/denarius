@@ -3,7 +3,8 @@
         gloss.core
         aleph.tcp)
   (:require [clojure.tools.cli :refer [parse-opts]]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [denarius.tcp :as tcp])
   (:gen-class))
 
 
@@ -97,7 +98,7 @@
         order-id  (:order-id order-map)
         size      (:size order-map)
         price     (:price order-map)]
-    (if (= 2 msg-type)
+    (if (= tcp/message-response-executed msg-type)
       (let [side (first (keep #(if (= order-id (:order-id %)) (:side %)) @orders))]
         (dosync (alter position (if (= :ask side) #(- % size) (partial + size))))
         (print-response order-id side price) ))))
@@ -108,7 +109,7 @@
         order-type (if (:market opt) :market :limit)
         price      (:price opt)
         size       (:size opt)
-        order-map  {:req-type 1 :broker-id broker-id :order-id order-id
+        order-map  {:req-type tcp/message-request-order :broker-id broker-id :order-id order-id
                     :order-type order-type :side side :size size :price price}
         order-str  (json/write-str order-map)]
     (print-order order-id order-type side size price)

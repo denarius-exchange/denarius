@@ -8,7 +8,7 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
             [denarius.connector.db :as db]
-            )
+            [denarius.tcp :as tcp])
   (:import [denarius.connector.db nildb]) )
 
 
@@ -39,12 +39,14 @@
         size        (:size        order-map)
         price       (:price       order-map)
         ch-brkr     (@channels broker-id-1)]
-    (if (= 1 msg-type)
+    (condp msg-type
+      tcp/message-response-executed
       (do
         (if ch-brkr
           (do
             (db/insert broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
-            (enqueue ch-brkr (json/write-str {:msg-type 2 :broker-id broker-id-1
+            (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
+                                              :broker-id broker-id-1
                                               :order-id order-id-1 :size size
                                               :price price}) ) ))
         ))))
@@ -70,9 +72,8 @@
                           price]             req-params
                          order-type          (case order-type-str "limit" :limit "market" :market)
                          side                (case side-str "bid" :bid "ask" :ask)]
-                     (case req-type
-                       1 (do 
-                           (enqueue engine-chnl req) ))
+                     (condp req-type
+                       tcp/message-request-order (do (enqueue engine-chnl req) ))
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker
                          (do
@@ -80,7 +81,7 @@
                              (swap! channels #(assoc % broker-id channel)) ))
                          (swap! channels #(assoc % broker-id channel))))
                      ; return response
-                     (enqueue channel (json/write-str {:msg-type 0 
+                     (enqueue channel (json/write-str {:msg-type tcp/message-response-received
                                                        :status :OK}) )))))  )
 
 

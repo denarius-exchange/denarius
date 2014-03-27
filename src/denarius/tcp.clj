@@ -9,6 +9,11 @@
             [clojure.core.async :as async]))
 
 
+(def message-request-order 1)
+(def message-request-position 2)
+(def message-response-received 0)
+(def message-response-executed 1)
+
 (def book (ref nil))
 (def async-channel (ref nil))
 
@@ -16,7 +21,7 @@
   (fn [order-ref-1 order-ref-2 size price]
     (if-not (nil? channel)
       (enqueue channel 
-               (json/json-str {:msg-type    1
+               (json/json-str {:msg-type    message-response-executed
                                :order-id-1  (:order-id  @order-ref-1)
                                :broker-id-1 (:broker-id @order-ref-1)
                                :order-id-2  (:order-id  @order-ref-2)
@@ -42,10 +47,10 @@
                         price]             req-params
                        order-type          (case order-type-str "limit" :limit "market" :market)
                        side                (case side-str "bid" :bid "ask" :ask)]
-                   (case req-type
-                     1 (let [order-ref  (create-order-ref order-id broker-id
-                                                          order-type side size price 
-                                                          nil [(inform-match channel)])]
+                   (condp req-type
+                     message-request-order (let [order-ref  (create-order-ref order-id broker-id
+                                                                              order-type side size price 
+                                                                              nil [(inform-match channel)])]
                          (insert-order @book order-ref)
                          ; We unlock the matching loop
                          (async/go (async/>! @async-channel 1)) ; duplicate??
