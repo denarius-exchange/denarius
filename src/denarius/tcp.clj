@@ -47,7 +47,7 @@
                         price]             req-params
                        order-type          (case order-type-str "limit" :limit "market" :market)
                        side                (case side-str "bid" :bid "ask" :ask)]
-                   (condp req-type
+                   (condp = req-type
                      message-request-order (let [order-ref  (create-order-ref order-id broker-id
                                                                               order-type side size price 
                                                                               nil [(inform-match channel)])]

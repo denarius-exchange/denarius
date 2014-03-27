@@ -72,7 +72,7 @@
                           price]             req-params
                          order-type          (case order-type-str "limit" :limit "market" :market)
                          side                (case side-str "bid" :bid "ask" :ask)]
-                     (condp req-type
+                     (condp = req-type
                        tcp/message-request-order (do (enqueue engine-chnl req) ))
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker
