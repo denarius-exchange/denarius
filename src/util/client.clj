@@ -57,6 +57,8 @@
            "position\tShow net position\n"
            "help\t\tShow this help\n"
            "history\tShow sent order history\n"
+           "list\t\tList orders to the server\n"
+           "cancel\t\tCancel order with ID\n"
            "exit\t\tQuit program (also quit)\n") )
 
 (defmethod show-commands "send" [command]
@@ -68,7 +70,14 @@
            "\t-a\t\tAsk order\n"
            "\t-s SIZE\t\tOrder size\n"
            "\t-p PRICE\tOrder price\n"))
-  
+
+(defmethod show-commands "list" [command]
+  (println "\tList orders active on server\n"))
+
+(defmethod show-commands "cancel" [command]
+  (println "\tCancels an order on the server with ID\n"
+           "\t\tExample: cancel 1"))
+
 (defn print-order [order-id order-type side size price]
   (println "Sending" (if (= :market order-type) "MARKET" "LIMIT")
            "order," (if (= :ask side) "SELLING" "BUYING")
@@ -116,8 +125,13 @@
     (dosync (alter orders conj order-map))
     (enqueue channel order-str) ))
 
+
+(defn list-orders [] nil)
+
+
 (defn exit? [x] (or (= "exit" x)
                     (= "quit" x)))
+
 
 (defn input [channel broker-id]
   (loop [order-id 1]
@@ -138,6 +152,7 @@
             "send"     (send-order channel broker-id order-id opt)
             "position" (println "CURRENT NET POSITION: " @position)
             "history"  (print-history @orders)
+            "list"     (list-orders)
             ""         nil
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
