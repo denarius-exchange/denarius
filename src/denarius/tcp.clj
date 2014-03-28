@@ -9,10 +9,16 @@
             [clojure.core.async :as async]))
 
 
-(def message-request-order 1)
-(def message-request-position 2)
+(def message-request-order 2)
+(def message-request-position 3)
+(def message-request-list 4)
+(def message-request-cancel 5)
 (def message-response-received 0)
-(def message-response-executed 1)
+(def message-response-error 1)
+(def message-response-executed 2)
+(def message-response-position 3)
+(def message-response-list 4)
+
 
 (def book (ref nil))
 (def async-channel (ref nil))
@@ -20,18 +26,19 @@
 (defn inform-match [channel]
   (fn [order-ref-1 order-ref-2 size price]
     (if-not (nil? channel)
-      (enqueue channel 
-               (json/json-str {:msg-type    message-response-executed
+    (enqueue channel 
+             (json/json-str {:msg-type    message-response-executed
                                :order-id-1  (:order-id  @order-ref-1)
-                               :broker-id-1 (:broker-id @order-ref-1)
+                             :broker-id-1 (:broker-id @order-ref-1)
                                :order-id-2  (:order-id  @order-ref-2)
                                :broker-id-2 (:broker-id @order-ref-2)
                                :size        size
-                               :price       price})) )))
+                             :price       price})) )))
 
 (defn handler [channel channel-info]
   (receive-all channel
                (fn [req]
+                 (println req)
                  (let [req-params (for [l [:req-type
                                            :broker-id
                                            :order-id
@@ -51,10 +58,10 @@
                      message-request-order (let [order-ref  (create-order-ref order-id broker-id
                                                                               order-type side size price 
                                                                               nil [(inform-match channel)])]
-                         (insert-order @book order-ref)
-                         ; We unlock the matching loop
-                         (async/go (async/>! @async-channel 1)) ; duplicate??
-                         (async/go (async/>! @async-channel 1)) ))
+                                             (insert-order @book order-ref)
+                                             ; We unlock the matching loop
+                                             (async/go (async/>! @async-channel 1)) ; duplicate??
+                                             (async/go (async/>! @async-channel 1)) ))
                    ; return response 
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 
