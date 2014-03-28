@@ -26,14 +26,14 @@
 (defn inform-match [channel]
   (fn [order-ref-1 order-ref-2 size price]
     (if-not (nil? channel)
-    (enqueue channel 
-             (json/json-str {:msg-type    message-response-executed
+      (enqueue channel 
+               (json/json-str {:msg-type    message-response-executed
                                :order-id-1  (:order-id  @order-ref-1)
-                             :broker-id-1 (:broker-id @order-ref-1)
+                               :broker-id-1 (:broker-id @order-ref-1)
                                :order-id-2  (:order-id  @order-ref-2)
                                :broker-id-2 (:broker-id @order-ref-2)
                                :size        size
-                             :price       price})) )))
+                               :price       price})) )))
 
 (defn handler [channel channel-info]
   (receive-all channel
