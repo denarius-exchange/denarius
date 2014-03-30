@@ -38,7 +38,6 @@
 (defn handler [channel channel-info]
   (receive-all channel
                (fn [req]
-                 (println req)
                  (let [req-params (for [l [:req-type
                                            :broker-id
                                            :order-id
