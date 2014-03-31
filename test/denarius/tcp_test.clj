@@ -7,7 +7,8 @@
         denarius.engine
         denarius.tcp)
   (:require [clojure.data.json :as json]
-            [clojure.core.async :as async]) )
+            [clojure.core.async :as async]
+             [denarius.net.tcp :as tcp]) )
 
 
 (deftest test-http
@@ -33,11 +34,11 @@
     (testing "Two limit orders sent to the HTTP server. Check if they exist on the book"
              (let [order-book     (ref (create-order-book asset-name))
                    matching-agent (agent 1)
-                   req-ask        (json/write-str {:req-type 1 :broker-id 1 :order-id 1 
-                                                   :order-type :limit 
+                   req-ask        (json/write-str {:req-type tcp/message-request-order
+                                                   :broker-id 1 :order-id 1 :order-type :limit 
                                                    :side :ask :size 2 :price 10})
-                   req-bid        (json/write-str {:req-type 1 :broker-id 1 :order-id 2 
-                                                   :order-type :limit 
+                   req-bid        (json/write-str {:req-type tcp/message-request-order :broker-id 1
+                                                   :order-id 2 :order-type :limit 
                                                    :side :bid :size 3 :price 10})
                    async-ch   (async/chan)
                    stop-tcp   (start-tcp order-book port async-ch)

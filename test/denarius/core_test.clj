@@ -11,6 +11,7 @@
   (:require clojure.tools.logging
             [clojure.data.json :as json]
             [clojure.core.async :as async]
+            [denarius.net.tcp :as tcp]
             denarius.tcp))
 
 (defmacro bench
@@ -43,9 +44,9 @@
     (start-matching-loop book cross-function async-ch)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
-             (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1 
+             (let [req-ask     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-1 
                                                 :order-type :limit :side :ask :size 1 :price 10})
-                   req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
+                   req-bid     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
                    stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
@@ -58,13 +59,13 @@
                (stop-server) ))
     (testing "Four limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
-             (let [req-ask-1   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1
+             (let [req-ask-1   (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-1
                                                 :order-type :limit :side :ask :size 1 :price 10})
-                   req-ask-2   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
+                   req-ask-2   (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :ask :size 2 :price 10})
-                   req-bid-1   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-3
+                   req-bid-1   (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-3
                                                :order-type :limit  :side :bid :size 2 :price 10})
-                   req-bid-2   (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-4
+                   req-bid-2   (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-4
                                                 :order-type :limit :side :bid :size 2 :price 10})
                    stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
@@ -80,9 +81,9 @@
     (testing "Two limit orders sent to the TCP server (2 to 1). Check that they are partially 
               matched after some time"
              (clear-book @book)
-             (let [req-ask     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-1
+             (let [req-ask     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-1
                                                 :order-type :limit :side :ask :size 2 :price 10})
-                   req-bid     (json/write-str {:req-type 1 :broker-id 1 :order-id order-id-2
+                   req-bid     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
                    stop-server (denarius.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
@@ -107,7 +108,8 @@
                                      (if (>= requests max-requests)
                                        {:ask total-ask :bid total-bid}
                                        (let [size      (inc (rand-int 10))
-                                             req-order (json/write-str {:req-type 1 :broker-id 1 :order-id order-id
+                                             req-order (json/write-str {:req-type tcp/message-request-order
+                                                                        :broker-id 1 :order-id order-id
                                                                         :order-type :limit :side side :size size :price 10})]
                                          (enqueue channel req-order)
                                          (recur (if-not (= (rand-int 2) 0) :bid :ask)
@@ -150,7 +152,8 @@
                                        (let [order-type (if (= (rand-int 3) 4) :market :limit) ; Market orders make this test fail, see why on Issu #15
                                              price      10
                                              size       (inc (rand-int max-size))
-                                             req-order  (json/write-str {:req-type 1 :broker-id 1 :order-id order-id
+                                             req-order  (json/write-str {:req-type tcp/message-request-order
+                                                                         :broker-id 1 :order-id order-id
                                                                          :order-type order-type :side side :size size
                                                                          :price price})]
                                          (enqueue channel req-order)
@@ -195,7 +198,8 @@
                                        (let [order-type    (if (= (rand-int 5) 0) :market :limit) 
                                              price         (+ (rand-int 10) (if (= size :bid) 5 12))
                                              size          (inc (rand-int 10))
-                                             req-order  (json/write-str {:req-type 1 :broker-id 1 :order-id (get-order-id)
+                                             req-order  (json/write-str {:req-type tcp/message-request-order
+                                                                         :broker-id 1 :order-id (get-order-id)
                                                                          :order-type order-type :side side 
                                                                          :size size :price price})]
                                          (enqueue channel req-order)
