@@ -4,20 +4,10 @@
         aleph.tcp
         gloss.core
         denarius.order
-        denarius.engine)
+        denarius.engine
+        denarius.net.tcp)
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]))
-
-
-(def message-request-order 2)
-(def message-request-position 3)
-(def message-request-list 4)
-(def message-request-cancel 5)
-(def message-response-received 0)
-(def message-response-error 1)
-(def message-response-executed 2)
-(def message-response-position 3)
-(def message-response-list 4)
 
 
 (def book (ref nil))
