@@ -15,6 +15,7 @@
 (def default-connector-port 7892)
 
 (def channels (atom {}))
+(def orders (atom {}))
 
 (def connector-options
   [["-h" "--host HOST" "Engine host address"
@@ -56,24 +57,32 @@
   (fn [channel opt]
     (receive-all channel
                  (fn [req]
-                   (let [req-params (for [l [:req-type
-                                             :broker-id
-                                             :order-id
-                                             :order-type
-                                             :side
-                                             :size
-                                             :price]] (l (json/read-str req
-                                                                        :key-fn keyword) ))
-                         [req-type
-                          broker-id 
-                          order-id
-                          order-type-str
-                          side-str size 
-                          price]             req-params
-                         order-type          (case order-type-str "limit" :limit "market" :market)
-                         side                (case side-str "bid" :bid "ask" :ask)]
+                   (let [req-map   (json/read-str req :key-fn keyword)
+                         req-type  (:req-type req-map)
+                         broker-id (:broker-id req-map)]
                      (condp = req-type
-                       tcp/message-request-order (do (enqueue engine-chnl req) ))
+                       tcp/message-request-order (let [req-params (for [l [:order-id
+                                                                           :order-type
+                                                                           :side
+                                                                           :size
+                                                                           :price]] (l req-map))
+                                                       [order-id
+                                                        order-type-str
+                                                        side-str size 
+                                                        price]             req-params
+                                                       order-type          (case order-type-str "limit" :limit "market" :market)
+                                                       side                (case side-str "bid" :bid "ask" :ask)]
+                                                   (let [order-data {:size size :price price}]
+                                                     (if-let [broker-orders (@orders broker-id)]
+                                                       (if-let [order-with-id (@broker-orders order-id)]
+                                                         (println "Already sent")
+                                                         (do
+                                                           (swap! broker-orders assoc order-id order-data)
+                                                           (enqueue engine-chnl req)))
+                                                       (do 
+                                                         (enqueue engine-chnl req)
+                                                         (swap! orders assoc broker-id (atom order-data)))))
+                                                    ))
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker
                          (do
