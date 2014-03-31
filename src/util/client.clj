@@ -101,19 +101,22 @@
                  " Type=" order-type " Side=" side " Size=" size)
         (recur (rest order-list)) ))))
 
-(defn build-position [data]
+(defn response-receive [data]
   (let [order-map (json/read-str data :key-fn keyword)
-        msg-type  (:msg-type order-map)
-        order-id  (:order-id order-map)
-        size      (:size order-map)
-        price     (:price order-map)]
+        msg-type  (:msg-type order-map)]
     (condp = msg-type
       tcp/message-response-received nil
-      tcp/message-response-executed (let [side (first (keep #(if (= order-id (:order-id %)) 
+      tcp/message-response-error    (println "There was an error sending this order (possible duplicate?)")
+      tcp/message-response-executed (let [order-id  (:order-id order-map)
+                                          size      (:size order-map)
+                                          price     (:price order-map)
+                                          side (first (keep #(if (= order-id (:order-id %)) 
                                                                (:side %)) @orders))]
                                       (dosync (alter position (if (= :ask side) #(- % size) 
                                                                 (partial + size))))
-                                      (print-response order-id side price) ))))
+                                      (print-response order-id side price) )
+      tcp/message-response-list     (let [orders (:orders order-map)]
+                                      (map println orders) ))))
 
 
 (defn send-order [channel broker-id order-id opt]
@@ -129,7 +132,10 @@
     (enqueue channel order-str) ))
 
 
-(defn list-orders [] nil)
+(defn list-orders [channel broker-id]
+  (let [req-map {:req-type tcp/message-request-list :broker-id broker-id}
+        req-str (json/write-str req-map)]
+    (enqueue channel req-str) ))
 
 
 (defn exit? [x] (or (= "exit" x)
@@ -155,7 +161,7 @@
             "send"     (send-order channel broker-id order-id opt)
             "position" (println "CURRENT NET POSITION: " @position)
             "history"  (print-history @orders)
-            "list"     (list-orders)
+            "list"     (list-orders channel broker-id)
             ""         nil
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
@@ -175,6 +181,6 @@
                      :port port
                      :frame (string :utf-8 :delimiters ["\r\n"])}
             channel (wait-for-result (tcp-client tcp-opt))]
-        (receive-all channel build-position)
+        (receive-all channel response-receive)
         (println "DENARIUS UTILITY TEST CLIENT\nSee Denarius' Wiki\nUse help for commands")
         (input channel brid)))) )

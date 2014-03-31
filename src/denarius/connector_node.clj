@@ -8,7 +8,7 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
             [denarius.connector.db :as db]
-            [denarius.tcp :as tcp])
+            [denarius.net.tcp :as tcp])
   (:import [denarius.connector.db nildb]) )
 
 
@@ -82,7 +82,13 @@
                                                        (do 
                                                          (enqueue engine-chnl req)
                                                          (swap! orders assoc broker-id (atom order-data)))))
-                                                    ))
+                                                    )
+                       tcp/message-request-list (if-let [broker-orders (@orders broker-id)]
+                                                  (do   (println @broker-orders)
+                                                  (enqueue channel 
+                                                           (json/write-str {:msg-type 
+                                                                            tcp/message-response-list
+                                                                            :orders @broker-orders} )))) )
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker
                          (do
