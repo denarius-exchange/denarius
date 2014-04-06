@@ -37,7 +37,7 @@
         options    {:host "localhost",
                     :port 7891,
                     :frame (string :utf-8 :delimiters ["\r\n"])}
-        port        denarius.engine-node/default-port
+        port        tcp/default-engine-port
         idle-time   500
         idle-time-2 9000
         async-ch    (async/chan)]

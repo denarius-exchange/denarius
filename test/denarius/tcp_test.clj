@@ -11,7 +11,7 @@
              [denarius.net.tcp :as tcp]) )
 
 
-(deftest test-http
+(deftest test-tcp
   (let [order-id-1 1
         order-id-2 2
         order-id-3 3
@@ -27,10 +27,10 @@
         cross      (fn [order-in-book order-incoming size price]
                      (dosync (ref-set last-price [price size])))
         options    {:host "localhost",
-                    :port 7891,
+                    :port tcp/default-engine-port,
                     :frame (string :utf-8 :delimiters ["\r\n"])}
         asset-name "EURUSD"
-        port       7891]
+        port       tcp/default-engine-port]
     (testing "Two limit orders sent to the HTTP server. Check if they exist on the book"
              (let [order-book     (ref (create-order-book asset-name))
                    matching-agent (agent 1)
