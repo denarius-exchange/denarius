@@ -82,9 +82,9 @@
                                                          (swap! orders assoc broker-id (atom order-data)))))
                                                     )
                        tcp/message-request-list (if-let [broker-orders (@orders broker-id)]
-                                                  (do   (println @broker-orders)
-                                                  (enqueue channel 
-                                                           (json/write-str {:msg-type 
+                                                  (do
+                                                    (enqueue channel
+                                                           (json/write-str {:msg-type
                                                                             tcp/message-response-list
                                                                             :orders @broker-orders} )))) )
                      (let [ch-broker (@channels broker-id)]
