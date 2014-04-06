@@ -4,9 +4,11 @@
         denarius.engine-node
         denarius.connector-node)
   (:require [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts]]) )
+            [clojure.tools.cli :refer [parse-opts]]
+            [denarius.net.tcp :as tcp]) )
 
 
+; Specify connector port by default. If instance is engine, this is changed in engine_node.clj
 (def program-options
   [["-c" "--component COMPONENT" 
    "Specify if the instance should be an engine or a connector"
@@ -15,14 +17,14 @@
    :validate [#(case % "engine" true "connector" true false )
               "Must be engine or connector"]]
    ["-p" "--port PORT" "Port number to listent to"
-    :default denarius.connector-node/default-connector-port
+    :default tcp/default-connector-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-h" "--host HOST" "Engine host address"
     :default "localhost"
     :parse-fn identity]
    ["-e" "--engine-port PORT" "Engine port number to connect to"
-    :default denarius.engine-node/default-port
+    :default tcp/default-engine-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ;; A boolean option defaulting to nil

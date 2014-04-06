@@ -12,8 +12,6 @@
   (:import [denarius.connector.db nildb]) )
 
 
-(def default-connector-port 7892)
-
 (def channels (atom {}))
 (def orders (atom {}))
 
@@ -22,7 +20,7 @@
     :default "localhost"
     :parse-fn identity]
    ["-e" "--engine-port PORT" "Engine port number to connect to"
-    :default denarius.engine-node/default-port
+    :default tcp/default-engine-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-d" "--database-class CLASSNAME" "Full path of the database driver class to use. Must be present in the classpath."

@@ -6,14 +6,13 @@
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.core.async :as async]
+            [denarius.net.tcp :as tcp]
             denarius.tcp))
 
 
-(def default-port 7891)
-
 (def engine-options
   [["-p" "--port PORT" "Port number to listent to"
-    :default default-port
+    :default tcp/default-engine-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]])
 

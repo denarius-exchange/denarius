@@ -9,3 +9,7 @@
 (def message-response-executed 2)
 (def message-response-position 3)
 (def message-response-list 4)
+
+
+(def default-engine-port 7891)
+(def default-connector-port 7892)
