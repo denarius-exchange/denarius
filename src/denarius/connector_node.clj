@@ -39,11 +39,11 @@
         price       (:price       order-map)
         ch-brkr     (@channels broker-id-1)]
     (condp msg-type
-      tcp/message-response-executed
+           tcp/message-response-executed
       (do
         (if ch-brkr
           (do
-            (db/insert broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
+            (db/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
             (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
                                               :broker-id broker-id-1
                                               :order-id order-id-1 :size size
@@ -66,7 +66,7 @@
                                                                            :price]] (l req-map))
                                                        [order-id
                                                         order-type-str
-                                                        side-str size 
+                                                        side-str size
                                                         price]             req-params
                                                        order-type          (case order-type-str "limit" :limit "market" :market)
                                                        side                (case side-str "bid" :bid "ask" :ask)]
@@ -77,16 +77,25 @@
                                                          (do
                                                            (swap! broker-orders assoc order-id order-data)
                                                            (enqueue engine-chnl req)))
-                                                       (do 
+                                                       (do
                                                          (enqueue engine-chnl req)
-                                                         (swap! orders assoc broker-id (atom order-data)))))
-                                                    )
-                       tcp/message-request-list (if-let [broker-orders (@orders broker-id)]
-                                                  (do
-                                                    (enqueue channel
-                                                           (json/write-str {:msg-type
-                                                                            tcp/message-response-list
-                                                                            :orders @broker-orders} )))) )
+                                                         (swap! orders assoc broker-id (atom {order-id order-data})))))
+                                                   )
+                       tcp/message-request-list   (if-let [broker-orders (@orders broker-id)]
+                                                    (do
+                                                      (enqueue channel
+                                                               (json/write-str {:msg-type
+                                                                                        tcp/message-response-list
+                                                                                :orders @broker-orders} ))))
+                       tcp/message-request-trades (if-let [broker-trades (db/query-trades broker-id)]
+                                                    (let [trades (map (fn [t] (into {} (map (fn [k] {k (k t)})
+                                                                                            [:order-id-1 :size :price])))
+                                                                      broker-trades)]
+                                                      (enqueue channel
+                                                               (json/write-str {:msg-type
+                                                                                        tcp/message-response-trades
+                                                                                :trades trades} ))))
+                       )
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker
                          (do
@@ -100,9 +109,9 @@
 
 (defn start-front-server [port e-host e-port e-chnl]
   (info "Starting connector front server on port" port)
-  (start-tcp-server (create-handler e-host e-port e-chnl) 
+  (start-tcp-server (create-handler e-host e-port e-chnl)
                     {:port port
-                     :frame (string :utf-8 
+                     :frame (string :utf-8
                                     :delimiters ["\r\n"])}) )
 
 (defn create-back-channel [e-host e-port]
@@ -117,13 +126,13 @@
 
 (defn start-connector [prog-opt args]
   (info "Starting connector node")
-  (let [{:keys [options arguments errors summary]} (parse-opts args 
+  (let [{:keys [options arguments errors summary]} (parse-opts args
                                                                connector-options)
         port   (:port prog-opt)
         e-port (:engine-port options)
         e-host (:host options)
         dbopt  (:database-class options)
-        dbpath (if (= dbopt "denarius.connector.db.nildb") 
+        dbpath (if (= dbopt "denarius.connector.db.nildb")
                  (config :connector :database-class) dbopt)
         dbsplt (clojure.string/split dbpath #"\.+")
         dbname (last dbsplt)
