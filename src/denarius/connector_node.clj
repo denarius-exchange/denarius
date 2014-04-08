@@ -88,7 +88,8 @@
                                                                                         tcp/message-response-list
                                                                                 :orders @broker-orders} ))))
                        tcp/message-request-trades (if-let [broker-trades (db/query-trades broker-id)]
-                                                    (let [trades (map (fn [t] (into {} (map (fn [k] {k (k t)})
+                                                    (let [fn-idkey-tran #(condp = % :order-id-1 :order-id %)
+                                                          trades (map (fn [t] (into {} (map (fn [k] {(fn-idkey-tran k) (k t)})
                                                                                             [:order-id-1 :size :price])))
                                                                       broker-trades)]
                                                       (enqueue channel
