@@ -53,13 +53,19 @@
 
 (defmethod show-commands nil [command]
   (print " ") ; space formatting
-  (println "send\t\tSend an order to the server\n"
+  (println "start\t\tInitializes the order ID counter\n"
+           "send\t\tSend an order to the server\n"
            "position\tShow net position\n"
            "help\t\tShow this help\n"
            "history\tShow sent order history\n"
            "list\t\tList orders to the server\n"
            "cancel\t\tCancel order with ID\n"
            "exit\t\tQuit program (also quit)\n") )
+
+(defmethod show-commands "start" [command]
+  (println "\tInitializes the order ID to a number to avoid repeated orders by ID.\n"
+           "\tThis is useful if using a connector that has already received orders from this broker ID\n"
+           "\t\tExample: start 9"))
 
 (defmethod show-commands "send" [command]
   (println "\tSend order to the server\n"
@@ -72,11 +78,20 @@
            "\t-p PRICE\tOrder price\n"))
 
 (defmethod show-commands "list" [command]
-  (println "\tList orders active on server\n"))
+  (println "\tList orders active on the connector node\n"
+           "\t\tExample: list"))
 
 (defmethod show-commands "cancel" [command]
-  (println "\tCancels an order on the server with ID\n"
+  (println "\tCancels an order on the server with ID. Not implemented yet.\n"
            "\t\tExample: cancel 1"))
+
+(defmethod show-commands "history" [command]
+  (println "\tLocal history of sent orders in this session\n"
+           "\t\tExample: history"))
+
+(defmethod show-commands "trades" [command]
+  (println "\tTrades present in the connector node's database\n"
+           "\t\tExample: trades"))
 
 (defn print-order [order-id order-type side size price]
   (println "Sending" (if (= :market order-type) "MARKET" "LIMIT")
@@ -101,23 +116,49 @@
                  " Type=" order-type " Side=" side " Size=" size)
         (recur (rest order-list)) ))))
 
+
+(defmulti response (fn [msg-type & others] msg-type) :default :default)
+
+(defmethod response :default [msg-type data]
+  (println (str "WARNING: " msg-type "not implemented. Data follows: " data) ))
+
+(defmethod response tcp/message-response-received [msg-type order-map]
+          nil)
+
+(defmethod response tcp/message-response-error    [msg-type order-map]
+          (println "There was an error sending this order (possible duplicate?)") )
+
+(defmethod response tcp/message-response-executed [msg-type order-map]
+          (let [order-id  (:order-id order-map)
+                size      (:size order-map)
+                price     (:price order-map)
+                side (first (keep #(if (= order-id (:order-id %))
+                                    (:side %)) @orders))]
+            (dosync (alter position (if (= :ask side) #(- % size)
+                                                      (partial + size))))
+            (print-response order-id side price) ))
+
+(defmethod response tcp/message-response-list     [msg-type order-map]
+          (let [orders (:orders order-map)]
+            (doseq [x (partition 2 (interleave (keys orders) (vals orders)))]
+              (let [id    (Long/parseLong (name (first x)))
+                    body  (second x)
+                    size  (:size body)
+                    price (:price body)]
+                (println "Order ID" id "with size" size "at price" price)))))
+
+(defmethod response tcp/message-response-trades   [msg-type order-map]
+          (let [trades (:trades order-map)]
+            (doseq [x trades] (println "Order ID=" (:order-id x) " size " (:size x)))))
+
 (defn response-receive [data]
   (let [order-map (json/read-str data :key-fn keyword)
         msg-type  (:msg-type order-map)]
-    (condp = msg-type
-      tcp/message-response-received nil
-      tcp/message-response-error    (println "There was an error sending this order (possible duplicate?)")
-      tcp/message-response-executed (let [order-id  (:order-id order-map)
-                                          size      (:size order-map)
-                                          price     (:price order-map)
-                                          side (first (keep #(if (= order-id (:order-id %)) 
-                                                               (:side %)) @orders))]
-                                      (dosync (alter position (if (= :ask side) #(- % size) 
-                                                                (partial + size))))
-                                      (print-response order-id side price) )
-      tcp/message-response-list     (let [orders (:orders order-map)]
-                                      (map println orders) ))))
+    (response msg-type order-map)))
 
+
+(defn start [id]
+  nil)
 
 (defn send-order [channel broker-id order-id opt]
   (let [side       (if (:ask opt) :ask :bid)
@@ -131,9 +172,17 @@
     (dosync (alter orders conj order-map))
     (enqueue channel order-str) ))
 
+(defn cancel [id]
+  nil)
 
 (defn list-orders [channel broker-id]
   (let [req-map {:req-type tcp/message-request-list :broker-id broker-id}
+        req-str (json/write-str req-map)]
+    (enqueue channel req-str) ))
+
+
+(defn list-trades [channel broker-id]
+  (let [req-map {:req-type tcp/message-request-trades :broker-id broker-id}
         req-str (json/write-str req-map)]
     (enqueue channel req-str) ))
 
@@ -158,10 +207,13 @@
               opt     (:options params)]
           (case command
             "help"     (show-commands (second line))
+            "start"    (start (second line))
             "send"     (send-order channel broker-id order-id opt)
+            "cancel"   (cancel (second line))
             "position" (println "CURRENT NET POSITION: " @position)
             "history"  (print-history @orders)
             "list"     (list-orders channel broker-id)
+            "trades"   (list-trades channel broker-id)
             ""         nil
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
