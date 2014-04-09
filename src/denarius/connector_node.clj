@@ -44,6 +44,16 @@
         (if ch-brkr
           (do
             (db/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
+            ; Remove this part when generalizing trading protocols
+            (if-let [broker-orders (@orders broker-id-1)]
+              (if-let [order-data (@broker-orders order-id-1)]
+                      (if (< size (:size order-data))
+                        (let [o-size    (- (:size order-data) size)
+                              new-order (assoc order-data :size o-size)]
+                          (swap! broker-orders assoc order-id-1 new-order))
+                        (swap! broker-orders dissoc order-id-1))
+                      nil)
+              nil)
             (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
                                               :broker-id broker-id-1
                                               :order-id order-id-1 :size size
