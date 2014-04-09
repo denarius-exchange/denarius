@@ -10,6 +10,7 @@
 
 (def position (ref 0))
 (def orders (ref []))
+(def current (atom 0))
 
 (def read-options
   [["-a" "--ask" "Order is ask"
@@ -158,7 +159,9 @@
 
 
 (defn start [id]
-  nil)
+  {:pre [(number? id) (>= id 0)]}
+  (println "Setting current order ID to" id)
+  (reset! current id))
 
 (defn send-order [channel broker-id order-id opt]
   (let [side       (if (:ask opt) :ask :bid)
@@ -192,7 +195,7 @@
 
 
 (defn input [channel broker-id]
-  (loop [order-id 1]
+  (while true
     (print "> ")
     (flush)
     (let [v (read-line)]
@@ -200,14 +203,15 @@
         (do
           (close channel)
           (println "Bye!"))
-        (let [line    (.split v " ")
-              command (first line)
-              body    (rest line)
-              params  (parse-opts body read-options)
-              opt     (:options params)]
+        (let [line     (.split v " ")
+              command  (first line)
+              body     (rest line)
+              params   (parse-opts body read-options)
+              opt      (:options params)
+              order-id @current]
           (case command
             "help"     (show-commands (second line))
-            "start"    (start (second line))
+            "start"    (start (Integer/parseInt (second line)))
             "send"     (send-order channel broker-id order-id opt)
             "cancel"   (cancel (second line))
             "position" (println "CURRENT NET POSITION: " @position)
@@ -217,7 +221,8 @@
             ""         nil
             (println command "is not a command. See help,"))
           (Thread/sleep 200)
-          (recur (inc order-id) ))))))
+          (swap! current inc)
+          )))))
 
 
 (defn -main [& args]
