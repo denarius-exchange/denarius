@@ -7,9 +7,10 @@
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
-            [denarius.connector.db :as db]
+            [denarius.connector.db-trades :as db-trades]
+            [denarius.connector.db-orders :as db-orders]
             [denarius.net.tcp :as tcp])
-  (:import [denarius.connector.db nildb]) )
+  (:import [denarius.connector.db_trades db-trades-nil]) )
 
 
 (def channels (atom {}))
@@ -24,7 +25,7 @@
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
    ["-d" "--database-class CLASSNAME" "Full path of the database driver class to use. Must be present in the classpath."
-    :default "denarius.connector.db.nildb"
+    :default "denarius.connector.db.db-trades-nil"
     :validate [#(not (empty? %)) "Must be not empty"]]])
 
 
@@ -43,7 +44,7 @@
       (do
         (if ch-brkr
           (do
-            (db/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
+            (db-trades/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
             ; Remove this part when generalizing trading protocols
             (if-let [broker-orders (@orders broker-id-1)]
               (if-let [order-data (@broker-orders order-id-1)]
@@ -97,7 +98,7 @@
                                                                (json/write-str {:msg-type
                                                                                         tcp/message-response-list
                                                                                 :orders @broker-orders} ))))
-                       tcp/message-request-trades (if-let [broker-trades (db/query-trades broker-id)]
+                       tcp/message-request-trades (if-let [broker-trades (db-trades/query-trades broker-id)]
                                                     (let [fn-idkey-tran #(condp = % :order-id-1 :order-id %)
                                                           trades (map (fn [t] (into {} (map (fn [k] {(fn-idkey-tran k) (k t)})
                                                                                             [:order-id-1 :size :price])))
@@ -143,7 +144,7 @@
         e-port (:engine-port options)
         e-host (:host options)
         dbopt  (:database-class options)
-        dbpath (if (= dbopt "denarius.connector.db.nildb")
+        dbpath (if (= dbopt "denarius.connector.db.db-trades-nil")
                  (config :connector :database-class) dbopt)
         dbsplt (clojure.string/split dbpath #"\.+")
         dbname (last dbsplt)
@@ -153,5 +154,5 @@
     ; Set the driver class for the database system to use it
     (require (eval `(symbol ~dbpkg)))
     (import [(eval `(symbol dbpkg) `(symbol dbname))])
-    (reset! db/dbname (eval `(new ~(symbol dbpath))))
+    (reset! db-trades/dbname (eval `(new ~(symbol dbpath))))
     (start-front-server port e-host e-port e-chnl) ))
