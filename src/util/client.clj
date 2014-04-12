@@ -190,8 +190,9 @@
     (enqueue channel req-str) ))
 
 
-(defn exit? [x] (or (= "exit" x)
-                    (= "quit" x)))
+(defn exit? [x] (if (or (= "exit" x)
+                        (= "quit" x))
+                  (System/exit 0)))
 
 
 (defn input [channel broker-id]
