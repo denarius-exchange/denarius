@@ -14,10 +14,12 @@
         )))
   (query-orders-impl [this broker-id] nil)
   (alter-size-impl   [this broker-id order-id new-size]
-    {:pre (> new-size 0)}
+    {:pre (>= new-size 0)}
     (if-let [broker-orders (@orders broker-id)]
-      (let [order (@broker-orders order-id)]
-        (swap! order assoc :size new-size))))
+      (if (= new-size 0)
+        (swap! broker-orders dissoc order-id)
+        (let [order (@broker-orders order-id)]
+          (swap! order assoc :size new-size)))))
   (remove-order-impl [this broker-id order-id]
     (if-let [broker-orders (@orders broker-id)]
       (swap! broker-orders dissoc order-id)))
