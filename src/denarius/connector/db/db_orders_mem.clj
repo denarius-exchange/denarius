@@ -3,8 +3,8 @@
 
 (def orders (atom []))
 
-(deftype memorders []
-  db-orders
+(deftype db-orders-mem []
+  db/db-orders
   (init-orders-impl  [this] (reset! orders {}))
   (insert-order-impl [this broker-id order]
     (let [order-id (:order-id order)]
