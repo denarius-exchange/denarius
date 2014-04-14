@@ -13,7 +13,8 @@
         (swap! broker-orders assoc broker-id (atom {order-id (atom order)}))
         (swap! orders assoc broker-id (atom {order-id (atom order)}))
         )))
-  (query-orders-impl [this broker-id] (@orders broker-id))
+  (query-orders-impl [this broker-id] (@orders broker-id)
+    @(@orders broker-id))
   (query-order-impl [this broker-id order-id]
     (let [broker-oders (@orders broker-id)
           order        (@broker-oders order-id)]
