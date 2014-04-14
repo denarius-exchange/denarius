@@ -23,13 +23,13 @@
   (stop-orders-impl   [this] nil))
 
 ; Order database name to be set via configuration
-(def dborders (atom (nilorders.)))
+(def dbname (atom (nilorders.)))
 
-(defn init-orders  [] (init-orders-impl @dborders))
-(defn insert-order [order] (insert-order-impl @dborders order))
-(defn query-orders [broker-id] (query-orders-impl @dborders broker-id))
-(defn query-order  [broker-id order-id] (query-order-impl @dborders broker-id order-id))
-(defn remove-order [broker-id order-id] (remove-order-impl @dborders broker-id order-id))
-(defn alter-size   [broker-id order-id new-size] (alter-size-impl @dborders broker-id order-id new-size))
-(defn decrease-size [broker-id order-id amount] (decrease-size-impl @dborders broker-id order-id amount))
-(defn stop-orders  [] (stop-orders-impl @dborders))
+(defn init-orders  [] (init-orders-impl @dbname))
+(defn insert-order [order] (insert-order-impl @dbname order))
+(defn query-orders [broker-id] (query-orders-impl @dbname broker-id))
+(defn query-order  [broker-id order-id] (query-order-impl @dbname broker-id order-id))
+(defn remove-order [broker-id order-id] (remove-order-impl @dbname broker-id order-id))
+(defn alter-size   [broker-id order-id new-size] (alter-size-impl @dbname broker-id order-id new-size))
+(defn decrease-size [broker-id order-id amount] (decrease-size-impl @dbname broker-id order-id amount))
+(defn stop-orders  [] (stop-orders-impl @dbname))

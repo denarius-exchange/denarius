@@ -12,10 +12,10 @@
                          :size size :price price}]
       (if-let [broker-trades (@trades broker-id-1)]
         (swap! broker-trades conj newtrade)
-        (swap! trades assoc broker-id-1 (atom [newtrade]))
-        )))
+        (swap! trades assoc broker-id-1 (atom [newtrade]))  )))
   (query-trades-impl [this broker-id]
-    @(@trades broker-id))
+    (if-let [broker-trades (@trades broker-id)]
+      @broker-trades))
   (stop-trades-impl [this] nil) )
 
 

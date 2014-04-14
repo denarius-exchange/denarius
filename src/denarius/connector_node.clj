@@ -7,6 +7,7 @@
   (:require [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.data.json :as json]
+            [denarius.order :as o]
             [denarius.connector.db-trades :as db-trades]
             [denarius.connector.db-orders :as db-orders]
             [denarius.net.tcp :as tcp])
@@ -14,7 +15,6 @@
 
 
 (def channels (atom {}))
-(def orders (atom {}))
 
 (def connector-options
   [["-h" "--host HOST" "Engine host address"
@@ -24,8 +24,11 @@
     :default tcp/default-engine-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
-   ["-d" "--database-class CLASSNAME" "Full path of the database driver class to use. Must be present in the classpath."
+   ["-d" "--database-trades CLASSNAME" "Full path of the database driver class to use with trades database. Must be present in the classpath."
     :default "denarius.connector.db.db-trades-nil"
+    :validate [#(not (empty? %)) "Must be not empty"]]
+   ["-o" "--database-orders CLASSNAME" "Full path of the database driver class to use with orders database. Must be present in the classpath."
+    :default "denarius.connector.db.db-orders-nil"
     :validate [#(not (empty? %)) "Must be not empty"]]])
 
 
@@ -45,16 +48,7 @@
         (if ch-brkr
           (do
             (db-trades/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
-            ; Remove this part when generalizing trading protocols
-            (if-let [broker-orders (@orders broker-id-1)]
-              (if-let [order-data (@broker-orders order-id-1)]
-                      (if (< size (:size order-data))
-                        (let [o-size    (- (:size order-data) size)
-                              new-order (assoc order-data :size o-size)]
-                          (swap! broker-orders assoc order-id-1 new-order))
-                        (swap! broker-orders dissoc order-id-1))
-                      nil)
-              nil)
+            (db-orders/decrease-size broker-id-1 order-id-1 size)
             (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
                                               :broker-id broker-id-1
                                               :order-id order-id-1 :size size
@@ -80,32 +74,25 @@
                                                         side-str size
                                                         price]             req-params
                                                        order-type          (case order-type-str "limit" :limit "market" :market)
-                                                       side                (case side-str "bid" :bid "ask" :ask)]
-                                                   (let [order-data {:size size :price price}]
-                                                     (if-let [broker-orders (@orders broker-id)]
-                                                       (if-let [order-with-id (@broker-orders order-id)]
-                                                         (println "Already sent")
-                                                         (do
-                                                           (swap! broker-orders assoc order-id order-data)
-                                                           (enqueue engine-chnl req)))
-                                                       (do
-                                                         (enqueue engine-chnl req)
-                                                         (swap! orders assoc broker-id (atom {order-id order-data})))))
-                                                   )
-                       tcp/message-request-list   (if-let [broker-orders (@orders broker-id)]
-                                                    (do
+                                                       side                (case side-str "bid" :bid "ask" :ask)
+                                                       order               (o/create-order order-id broker-id order-type side size price)]
+                                                   (if-let [order-with-id (db-orders/query-order broker-id order-id)]
+                                                     (println "Already sent")
+                                                     (do
+                                                       (db-orders/insert-order order)
+                                                       (enqueue engine-chnl req))))
+                       tcp/message-request-list   (if-let [broker-orders (db-orders/query-orders broker-id)]
+                                                    (let [order-list (map deref (vals broker-orders))]
                                                       (enqueue channel
-                                                               (json/write-str {:msg-type
-                                                                                        tcp/message-response-list
-                                                                                :orders @broker-orders} ))))
+                                                              (json/write-str {:msg-type tcp/message-response-list
+                                                                               :orders order-list} ))))
                        tcp/message-request-trades (if-let [broker-trades (db-trades/query-trades broker-id)]
                                                     (let [fn-idkey-tran #(condp = % :order-id-1 :order-id %)
                                                           trades (map (fn [t] (into {} (map (fn [k] {(fn-idkey-tran k) (k t)})
                                                                                             [:order-id-1 :size :price])))
                                                                       broker-trades)]
                                                       (enqueue channel
-                                                               (json/write-str {:msg-type
-                                                                                        tcp/message-response-trades
+                                                               (json/write-str {:msg-type tcp/message-response-trades
                                                                                 :trades trades} ))))
                        )
                      (let [ch-broker (@channels broker-id)]
@@ -143,16 +130,26 @@
         port   (:port prog-opt)
         e-port (:engine-port options)
         e-host (:host options)
-        dbopt  (:database-class options)
-        dbpath (if (= dbopt "denarius.connector.db.db-trades-nil")
-                 (config :connector :database-class) dbopt)
-        dbsplt (clojure.string/split dbpath #"\.+")
-        dbname (last dbsplt)
-        dbpspl (keep-indexed (fn [i x] (if (< (+ i 1) (count dbsplt)) x)) dbsplt)
-        dbpkg  (clojure.string/join "." dbpspl)
+        db-trd (:database-trades options)
+        db-ord (:database-orders options)
+        dbtpth (if (= db-trd "denarius.connector.db.db-trades-nil")
+                 (config :connector :database-trades) db-trd)
+        dbopth (if (= db-ord "denarius.connector.db.db-orders-nil")
+                 (config :connector :database-orders) db-ord)
+        dbsplt (clojure.string/split dbtpth #"\.+")
+        dboplt (clojure.string/split dbopth #"\.+")
+        dbtnme (last dbsplt)
+        dbonme (last dboplt)
+        dbtsp2 (keep-indexed (fn [i x] (if (< (+ i 1) (count dbsplt)) x)) dbsplt)
+        dbosp2 (keep-indexed (fn [i x] (if (< (+ i 1) (count dboplt)) x)) dboplt)
+        dbtpkg (clojure.string/join "." dbtsp2)
+        dbopkg (clojure.string/join "." dbosp2)
         e-chnl (create-back-channel e-host e-port)]
     ; Set the driver class for the database system to use it
-    (require (eval `(symbol ~dbpkg)))
-    (import [(eval `(symbol dbpkg) `(symbol dbname))])
-    (reset! db-trades/dbname (eval `(new ~(symbol dbpath))))
+    (require (eval `(symbol ~dbtpkg)))
+    (import [(eval `(symbol dbtpkg) `(symbol dbtnme))])
+    (reset! db-trades/dbname (eval `(new ~(symbol dbtpth))))
+    (require (eval `(symbol ~dbopkg)))
+    (import [(eval `(symbol dbopkg) `(symbol dbonme))])
+    (reset! db-orders/dbname (eval `(new ~(symbol dbopth))))
     (start-front-server port e-host e-port e-chnl) ))

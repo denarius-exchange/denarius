@@ -141,12 +141,7 @@
 
 (defmethod response tcp/message-response-list     [msg-type order-map]
           (let [orders (:orders order-map)]
-            (doseq [x (partition 2 (interleave (keys orders) (vals orders)))]
-              (let [id    (Long/parseLong (name (first x)))
-                    body  (second x)
-                    size  (:size body)
-                    price (:price body)]
-                (println "Order ID" id "with size" size "at price" price)))))
+            (println orders)))
 
 (defmethod response tcp/message-response-trades   [msg-type order-map]
           (let [trades (:trades order-map)]
