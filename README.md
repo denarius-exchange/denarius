@@ -24,10 +24,11 @@ To try out Denarius, start the matching engine component with:
 lein run
 ```
 
-Optionally, start one (or more) connector component with
+Start one (or more) connector component with
 ```Bash
 lein run -c connector
 ```
+This step is not optional anymore, since the complexity of the communication protocol in the trading desk - connector component channel is different to the communication within the system (connector - engine). You can send orders directly to the engine but you will receive the fields expected by the connector, not by the client.
 
 Then send orders directly to the engine with the utility client ([See Wiki](https://github.com/denarius-exchange/denarius/wiki/Taste-it:-Interactive-order-entry-command-line))
 
