@@ -11,7 +11,8 @@
             [denarius.connector.db-trades :as db-trades]
             [denarius.connector.db-orders :as db-orders]
             [denarius.net.tcp :as tcp])
-  (:import [denarius.connector.db_trades db-trades-nil]) )
+  (:import [denarius.connector.db_trades db-trades-nil]
+           [denarius.connector.db_orders db-orders-nil]) )
 
 
 (def channels (atom {}))
@@ -24,10 +25,10 @@
     :default tcp/default-engine-port
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
-   ["-d" "--database-trades CLASSNAME" "Full path of the database driver class to use with trades database. Must be present in the classpath."
+   ["-t" "--database-trades-class CLASSNAME" "Full path of the database driver class to use with trades database. Must be present in the classpath."
     :default "denarius.connector.db.db-trades-nil"
     :validate [#(not (empty? %)) "Must be not empty"]]
-   ["-o" "--database-orders CLASSNAME" "Full path of the database driver class to use with orders database. Must be present in the classpath."
+   ["-o" "--database-orders-class CLASSNAME" "Full path of the database driver class to use with orders database. Must be present in the classpath."
     :default "denarius.connector.db.db-orders-nil"
     :validate [#(not (empty? %)) "Must be not empty"]]])
 
@@ -130,12 +131,14 @@
         port   (:port prog-opt)
         e-port (:engine-port options)
         e-host (:host options)
-        db-trd (:database-trades options)
-        db-ord (:database-orders options)
+        db-trd (:database-trades-class options)
+        db-ord (:database-orders-class options)
         dbtpth (if (= db-trd "denarius.connector.db.db-trades-nil")
-                 (config :connector :database-trades) db-trd)
+                 (config :connector :database-trades :class) db-trd)
         dbopth (if (= db-ord "denarius.connector.db.db-orders-nil")
-                 (config :connector :database-orders) db-ord)
+                 (config :connector :database-orders :class) db-ord)
+        dbtopt (config :connector :database-trades :options)
+        dboopt (config :connector :database-options :options)
         dbsplt (clojure.string/split dbtpth #"\.+")
         dboplt (clojure.string/split dbopth #"\.+")
         dbtnme (last dbsplt)
@@ -148,8 +151,8 @@
     ; Set the driver class for the database system to use it
     (require (eval `(symbol ~dbtpkg)))
     (import [(eval `(symbol dbtpkg) `(symbol dbtnme))])
-    (reset! db-trades/dbname (eval `(new ~(symbol dbtpth))))
+    (reset! db-trades/dbname (eval `(new ~(symbol dbtpth) `dbtopt)))
     (require (eval `(symbol ~dbopkg)))
-    (import [(eval `(symbol dbopkg) `(symbol dbonme))])
-    (reset! db-orders/dbname (eval `(new ~(symbol dbopth))))
+    (import [(eval `(symbol dbopkg) `(symbol dbonme dboopt))])
+    (reset! db-orders/dbname (eval `(new ~(symbol dbopth) `dboopt)))
     (start-front-server port e-host e-port e-chnl) ))

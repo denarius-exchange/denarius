@@ -3,7 +3,7 @@
 
 (def orders (atom {}))
 
-(deftype db-orders-mem []
+(deftype db-orders-mem [dbopt]
   db/db-orders
   (init-orders-impl  [this] (reset! orders {}))
   (insert-order-impl [this order]

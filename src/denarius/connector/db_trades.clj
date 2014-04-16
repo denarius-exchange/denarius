@@ -6,7 +6,7 @@
   (query-trades-impl [this broker-id])
   (stop-trades-impl  [this]))
 
-(defrecord db-trades-nil []
+(defrecord db-trades-nil [dbopt]
   db-trades
   (init-trades-impl  [this] nil)
   (insert-trade-impl [this broker-id-1 order-id-1 broker-id-2 order-id-2 size price] nil)
@@ -14,7 +14,7 @@
   (stop-trades-impl  [this] nil))
 
 ; Database name to be set via configuration
-(def dbname (atom (db-trades-nil.)))
+(def dbname (atom (db-trades-nil. nil)))
 
 ; Methods exposed by the namespace which encapsulate the multimethods and provide
 ; the dispatching first argument depending on the reference dbname

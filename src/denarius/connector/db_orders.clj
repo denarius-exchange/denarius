@@ -11,7 +11,7 @@
   (stop-orders-impl   [this]))
 
 
-(defrecord nilorders []
+(defrecord db-orders-nil [dbopt]
   db-orders
   (init-orders-impl   [this] nil)
   (insert-order-impl  [this order] nil)
@@ -23,7 +23,7 @@
   (stop-orders-impl   [this] nil))
 
 ; Order database name to be set via configuration
-(def dbname (atom (nilorders.)))
+(def dbname (atom (db-orders-nil. nil)))
 
 (defn init-orders  [] (init-orders-impl @dbname))
 (defn insert-order [order] (insert-order-impl @dbname order))

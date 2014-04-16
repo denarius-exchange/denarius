@@ -3,7 +3,7 @@
 
 (def trades (atom {}))
 
-(deftype db-trades-mem []
+(deftype db-trades-mem [dbopt]
   db/db-trades
   (init-trades-impl [this] (reset! trades []))
   (insert-trade-impl [this broker-id-1 order-id-1 broker-id-2 order-id-2 size price]
