@@ -11,9 +11,7 @@
             [denarius.connector.db-trades :as db-trades]
             [denarius.connector.db-orders :as db-orders]
             [denarius.connector.db-deskinfo :as db-deskinfo]
-            [denarius.net.tcp :as tcp])
-  (:import [denarius.connector.db_trades db-trades-nil]
-           [denarius.connector.db_orders db-orders-nil]) )
+            [denarius.net.tcp :as tcp]))
 
 
 (def channels (atom {}))
@@ -144,9 +142,9 @@
         dbopth (if (= db-ord "denarius.connector.db.db-orders-nil")
                  (config :connector :database-orders :class) db-ord)
         dbbpth (if (= db-nfo "denarius.connector.db.db-deskinfo-nil")
-                 (config :connector :database-orders :class) db-nfo)
+                 (config :connector :database-deskinfo :class) db-nfo)
         dbtopt (config :connector :database-trades :options)
-        dboopt (config :connector :database-options :options)
+        dboopt (config :connector :database-orders :options)
         dbbopt (config :connector :database-deskinfo :options)
         dbsplt (clojure.string/split dbtpth #"\.+")
         dboplt (clojure.string/split dbopth #"\.+")
@@ -159,18 +157,22 @@
         dbbsp2 (keep-indexed (fn [i x] (if (< (+ i 1) (count dbbplt)) x)) dbbplt)
         dbtpkg (clojure.string/join "." dbtsp2)
         dbopkg (clojure.string/join "." dbosp2)
-        dbbpkg (clojure.string/join "." dbosp2)
+        dbbpkg (clojure.string/join "." dbbsp2)
         e-chnl (create-back-channel e-host e-port)]
     ; Set the driver class for the database system (trades) to use
     (require (eval `(symbol ~dbtpkg)))
     (import [(eval `(symbol dbtpkg) `(symbol dbtnme))])
     (reset! db-trades/dbname (eval `(new ~(symbol dbtpth) `dbtopt)))
+    (db-trades/init-trades)
     ; Set the driver class for the database system (orders) to use
     (require (eval `(symbol ~dbopkg)))
     (import [(eval `(symbol dbopkg) `(symbol dbonme dboopt))])
     (reset! db-orders/dbname (eval `(new ~(symbol dbopth) `dboopt)))
+    (db-orders/init-orders)
     ; Set the driver class for the database system (deskinfo) to use
     (require (eval `(symbol ~dbbpkg)))
     (import [(eval `(symbol dbbpkg) `(symbol dbbnme dbbopt))])
     (reset! db-deskinfo/dbname (eval `(new ~(symbol dbbpth) `dbbopt)))
+    (db-deskinfo/init-deskinfo)
+    ; Create the server
     (start-front-server port e-host e-port e-chnl) ))
