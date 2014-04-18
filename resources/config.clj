@@ -4,6 +4,6 @@
                                :options nil}
              :database-orders {:class "denarius.connector.db.db_orders_mem.db-orders-mem"
                                :options nil}
-             :database-deskinfo {:class "denarius.connector.db.db_deskinfo_mem.db-deskinfo-mem"
+             :database-deskinfo {:class "denarius.connector.db.db_deskinfo_file.db-deskinfo-file"
                                  :options "resources/db_deskinfo_file.json"}}
  }
