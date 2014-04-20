@@ -7,7 +7,7 @@
 (deftype db-deskinfo-file [dbopt]
   db/db-deskinfo
   (init-deskinfo-impl [this]
-    (let [json-info (slurp "resources/db_deskinfo_file.json")
+    (let [json-info (slurp (:file dbopt))
           json-info (json/read-str json-info)
           map-info  (into {} (for [[k v] json-info]
                                [(Long/parseLong k) (into {} (map (fn [ki vi] (try [(keyword ki) (Long/parseLong vi)]
