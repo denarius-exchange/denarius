@@ -162,17 +162,17 @@
     ; Set the driver class for the database system (trades) to use
     (require (eval `(symbol ~dbtpkg)))
     (import [(eval `(symbol dbtpkg) `(symbol dbtnme))])
-    (reset! db-trades/dbname (eval `(new ~(symbol dbtpth) `dbtopt)))
+    (reset! db-trades/dbname (eval `(new ~(symbol dbtpth) ~dbtopt)))
     (db-trades/init-trades)
     ; Set the driver class for the database system (orders) to use
     (require (eval `(symbol ~dbopkg)))
     (import [(eval `(symbol dbopkg) `(symbol dbonme dboopt))])
-    (reset! db-orders/dbname (eval `(new ~(symbol dbopth) `dboopt)))
+    (reset! db-orders/dbname (eval `(new ~(symbol dbopth) ~dboopt)))
     (db-orders/init-orders)
     ; Set the driver class for the database system (deskinfo) to use
     (require (eval `(symbol ~dbbpkg)))
     (import [(eval `(symbol dbbpkg) `(symbol dbbnme dbbopt))])
-    (reset! db-deskinfo/dbname (eval `(new ~(symbol dbbpth) `dbbopt)))
+    (reset! db-deskinfo/dbname (eval `(new ~(symbol dbbpth) ~dbbopt)))
     (db-deskinfo/init-deskinfo)
     ; Create the server
     (start-front-server port e-host e-port e-chnl) ))
