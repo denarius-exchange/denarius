@@ -12,7 +12,7 @@
             [clojure.data.json :as json]
             [clojure.core.async :as async]
             [denarius.net.tcp :as tcp]
-            denarius.tcp))
+            denarius.engine.tcp))
 
 (defmacro bench
   "Times the execution of forms, discarding their output and returning
@@ -41,14 +41,14 @@
         idle-time   500
         idle-time-2 9000
         async-ch    (async/chan)]
-    (start-matching-loop book cross-function async-ch)
+    (start-matching-loop book async-ch)
     (testing "Two limit orders sent to the TCP server. Check that they are matched after some time"
              (clear-book @book)
              (let [req-ask     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-1 
                                                 :order-type :limit :side :ask :size 1 :price 10})
                    req-bid     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port async-ch)
+                   stop-server (denarius.engine.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -67,7 +67,7 @@
                                                :order-type :limit  :side :bid :size 2 :price 10})
                    req-bid-2   (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-4
                                                 :order-type :limit :side :bid :size 2 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port async-ch)
+                   stop-server (denarius.engine.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask-1)
                (enqueue channel req-bid-1)
@@ -85,7 +85,7 @@
                                                 :order-type :limit :side :ask :size 2 :price 10})
                    req-bid     (json/write-str {:req-type tcp/message-request-order :broker-id 1 :order-id order-id-2
                                                 :order-type :limit :side :bid :size 1 :price 10})
-                   stop-server (denarius.tcp/start-tcp book port async-ch)
+                   stop-server (denarius.engine.tcp/start-tcp book port async-ch)
                    channel     (wait-for-result (tcp-client options))]
                (enqueue channel req-ask)
                (enqueue channel req-bid)
@@ -96,7 +96,7 @@
                (stop-server) ))
     (testing "Bulk test: Send 1000 random-side limit orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
+             (let [stop-server   (denarius.engine.tcp/start-tcp book port async-ch)
                    max-requests  100
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []
@@ -136,7 +136,7 @@
                ))
     (testing "Bulk test: Send 1000 random-side limit AND market orders and check matching"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
+             (let [stop-server   (denarius.engine.tcp/start-tcp book port async-ch)
                    max-requests  1000
                    max-size      10
                    channel       (wait-for-result (tcp-client options))
@@ -184,7 +184,7 @@
     (testing "Bulk test: Send 1000 random-side, randomly priced limit AND market orders and check
               the best bid order is cheaper than the best ask order"
              (clear-book @book)
-             (let [stop-server   (denarius.tcp/start-tcp book port async-ch)
+             (let [stop-server   (denarius.engine.tcp/start-tcp book port async-ch)
                    max-requests  1000
                    channel       (wait-for-result (tcp-client options))
                    send-function (fn []

@@ -181,6 +181,19 @@
       (ref-set mkt-bid []) )))
 
 
+(defn cross-function [order-ref-1 order-ref-2 size price]
+  "Function called on order-matching. Callbacks added to the vector
+   :on-matching will be called."
+  ; first make changes persistent. If impossible, return false
+  (future
+    (let [more (:on-matching (meta @order-ref-1))]
+      (doall (map #(% order-ref-1 order-ref-2 size price) more)) )
+    (let [more (:on-matching (meta @order-ref-2))]
+      (doall (map #(% order-ref-2 order-ref-1 size price) more)) )
+    )
+  ; return true on no error
+  true)
+
 (defmulti match-order order-type-dispatch)
 
 (defmethod match-order :limit [^Book book ^Order order-ref cross]
@@ -252,7 +265,7 @@
                     (alter mkt-side #(subvec % 1))
                     (recur) ))))))))))
 
-(defn match-once [book cross]
+(defn match-once [book]
   "Selects the next order to be matched. Policy is: Choose the oldest market
    order of either bid or ask side, and then select the oldest limit order."
   (let [market-ask (:market-ask book)
@@ -272,14 +285,14 @@
             order-lmt  (min-key slct-epch limit-ask limit-bid)
             order-ref  (if order-mkt order-mkt order-lmt)]
         (if order-ref
-          (match-order book order-ref cross) )))))
+          (match-order book order-ref cross-function) )))))
 
 
-(defn start-matching-loop [book cross-function async-ch]
+(defn start-matching-loop [book async-ch]
   "Starts an infinite loop that will call match-once"
   (future 
     (while true ;(java.lang.Thread/sleep 1)
       (async/<!! async-ch)  ; block here until inserting order
       (try
-        (match-once @book cross-function )
+        (match-once @book )
         (catch Exception e (println e) false)) )))

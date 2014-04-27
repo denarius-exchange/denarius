@@ -5,7 +5,7 @@
         aleph.tcp
         denarius.order
         denarius.engine
-        denarius.tcp)
+        denarius.engine.tcp)
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]
              [denarius.net.tcp :as tcp]) )

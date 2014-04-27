@@ -272,7 +272,7 @@
                    order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price nil nil)]
                (insert-order order-book order-bid-1)
                (insert-order order-book order-ask-1)
-               (match-once order-book (fn [a b c d] nil))
+               (match-once order-book )
                (is (= 1 (count @(:market-bid order-book ))))
                (is (= 1 (count @(:market-ask order-book )))) ))
     (testing "Match two limit orders"
@@ -281,7 +281,7 @@
                    order-ask-1 (create-order-ref order-id-3 broker-id type-lmt :ask size price nil nil)]
                (insert-order order-book order-bid-1)
                (insert-order order-book order-ask-1)
-               (match-once order-book (fn [a b c d] nil))
+               (match-once order-book )
                (is (= 0 (market-depth order-book :bid price)))
                (is (= 0 (market-depth order-book :ask price))) ))
     (testing "Receive a market order, stack it and then match it with an incoming limit"
@@ -290,7 +290,7 @@
                    order-ask-1 (create-order-ref order-id-3 broker-id type :ask size price nil nil)]
                (insert-order order-book order-bid-1)
                (insert-order order-book order-ask-1)
-               (match-once order-book (fn [a b c d] nil))
+               (match-once order-book )
                (is (= 0 (count @(:market-bid order-book ))))
                (is (= 0 (market-depth order-book :ask price))) ))
     (testing "Receive two market orders, stack them until getting a limit order"
@@ -301,7 +301,7 @@
                (insert-order order-book order-bid-1)
                (insert-order order-book order-ask-1)
                (insert-order order-book order-bid-2)
-               (match-once order-book (fn [a b c d] nil))
+               (match-once order-book )
                (is (= 0 (count @(:market-bid order-book ))))
                (is (= 0 (count @(:market-ask order-book ))))
                (is (= 1 (market-depth order-book :bid price))) ))
@@ -313,61 +313,9 @@
                (insert-order order-book order-bid-1) (Thread/sleep 1)
                (insert-order order-book order-ask-1)
                (insert-order order-book order-bid-2)
-               (match-once order-book (fn [a b c d] nil ))
+               (match-once order-book )
                (is (= 0 (count @(:market-bid order-book ))))
                (is (= 1 (count @(:market-ask order-book ))))
                (is (= 2 (market-depth order-book :bid price))) ))
     ))
-
-
-(deftest test-bulk
-  (let [broker-id  1
-        total-size (ref 0)
-        cross      (fn [order-1 order-2 size price]
-                     (dosync (alter total-size + size)))
-        callback   (fn [] nil)
-        asset-name "EURUSD"]
-    (testing "Bulk test performance"
-             (let [order-book  (create-order-book asset-name)
-                   total-num   1000
-                   max-time    10000
-                   async-ch    (async/chan)
-                   order-loop  (fn []
-                                 (loop [order-id  1
-                                        total-bid 0
-                                        total-ask 0]
-                                   (let [side       (if (= 0 (rand-int 2)) :bid :ask)
-                                         size       (inc (rand-int 10))
-                                         price      10
-                                         order      (create-order-ref order-id broker-id :limit 
-                                                                      side size price nil callback)]
-                                     (async/thread
-                                       (insert-order order-book order)
-                                       (async/>!! async-ch 1) ; we need to unblock the loop 
-                                       )
-                                     (if (> order-id total-num)
-                                       [total-bid total-ask]
-                                       (recur (inc order-id)
-                                              (if (= :bid side)
-                                                (+ total-bid size)
-                                                total-bid)
-                                              (if (= :ask side)
-                                                (+ total-ask size)
-                                                total-ask ))))))
-                   time-test   (fn []
-                                 (let [time-increment 5]
-                                   (loop [time-counter 0]
-                                     (if (> time-counter max-time)
-                                       time-counter   ; exit failing
-                                       (if (<= total-num @total-size)
-                                         time-counter ; exit passing
-                                         (do
-                                           (Thread/sleep time-increment)
-                                           (recur (+ time-counter time-increment)) ))))))]
-               (order-loop)
-               (start-matching-loop (ref order-book) cross async-ch)
-               (Thread/sleep 50)
-               (let [time-taken (time-test)]
-                 (println "Time taken:" time-taken)
-                 (is (< time-taken max-time)) )))))
 

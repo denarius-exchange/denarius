@@ -1,4 +1,4 @@
-(ns denarius.tcp
+(ns denarius.engine.tcp
   (:use clojure.core
         lamina.core
         aleph.tcp
@@ -45,12 +45,18 @@
                        side                (case side-str "bid" :bid "ask" :ask)]
                    (condp = req-type
                      message-request-order (let [order-ref  (create-order-ref order-id broker-id
-                                                                              order-type side size price 
+                                                                              order-type side size price
                                                                               nil [(inform-match channel)])]
                                              (insert-order @book order-ref)
                                              ; We unlock the matching loop
                                              (async/go (async/>! @async-channel 1)) ; duplicate??
-                                             (async/go (async/>! @async-channel 1)) ))
+                                             (async/go (async/>! @async-channel 1)) )
+                     message-request-cancel (let [order-ref  (create-order-ref order-id broker-id
+                                                                               order-type side size price
+                                                                               nil nil)]
+                                              ; We need to create a new order ref to recover the one in the book,
+                                              ; this is horrible.
+                                              (denarius.engine/remove-order order-ref)))
                    ; return response 
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 
