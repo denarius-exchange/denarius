@@ -10,7 +10,8 @@
 (def message-response-executed 2)
 (def message-response-position 3)
 (def message-response-list     4)
-(def message-response-trades   5)
+(def message-response-cancel   5)
+(def message-response-trades   6)
 
 
 (def default-engine-port    7891)

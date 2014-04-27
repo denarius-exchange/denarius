@@ -147,6 +147,10 @@
           (let [trades (:trades order-map)]
             (doseq [x trades] (println "Order ID=" (:order-id x) " size " (:size x)))))
 
+(defmethod response tcp/message-response-cancel   [msg-type order-map]
+  (let [order-id (:order-id order-map)]
+    (println "Cancelled order ID=" order-id)))
+
 (defn response-receive [data]
   (let [order-map (json/read-str data :key-fn keyword)
         msg-type  (:msg-type order-map)]

@@ -25,6 +25,13 @@
                                :size        size
                                :price       price})) )))
 
+(defn inform-cancel [channel]
+  (fn [order-ref]
+    (if-not (nil? channel)
+      (enqueue channel
+               (json/json-str {:msg-type    message-response-cancel
+                               :order-id  (:order-id  @order-ref)})) )))
+
 (defn handler [channel channel-info]
   (receive-all channel
                (fn [req]
@@ -46,7 +53,8 @@
                    (condp = req-type
                      message-request-order (let [order-ref  (create-order-ref order-id broker-id
                                                                               order-type side size price
-                                                                              nil [(inform-match channel)])]
+                                                                              [(inform-cancel channel)]
+                                                                              [(inform-match channel)])]
                                              (insert-order @book order-ref)
                                              ; We unlock the matching loop
                                              (async/go (async/>! @async-channel 1)) ; duplicate??
