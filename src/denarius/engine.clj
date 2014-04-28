@@ -97,9 +97,30 @@
       (alter side-ref #(conj % order-ref)) )))
 
 
-(defmulti remove-order order-type-dispatch)
 
-(defmethod remove-order :limit [^Book book ^Order order-ref]
+(defmulti remove-order (fn [_ _ _ type _ _] type))
+
+(defmethod remove-order :limit [^Book book broker-id order-id type side price]
+  "Remove an order from the book specified as argument"
+  (let [side-ref  (side book)
+        level-ref (@side-ref price)
+        pred      #(= (:order-id @%) order-id)]
+    (if level-ref
+      (do
+        (println "CANCEL 2")
+        (dosync (alter level-ref #(remove pred %))) true ))))
+
+(defmethod remove-order :market [^Book book broker-id order-id type side price]
+  "Remove an order from the book specified as argument"
+  (let [side-ref  (order-market-side book side)
+        pred      #(= (:order-id @%) order-id)]
+    (println "CANCEL 2")
+    (dosync (alter side-ref #(remove pred %))) true ))
+
+
+(defmulti remove-order-ref order-type-dispatch)
+
+(defmethod remove-order-ref :limit [^Book book ^Order order-ref]
   "Remove an order from the book specified as argument"
   (let [order-id  (:order-id @order-ref)
         side      (:side @order-ref)
@@ -111,7 +132,7 @@
       (do
         (dosync (alter level-ref #(remove pred %))) true ))))
 
-(defmethod remove-order :market [^Book book ^Order order-ref]
+(defmethod remove-order-ref :market [^Book book ^Order order-ref]
   "Remove an order from the book specified as argument"
   (let [order-id  (:order-id @order-ref)
         side      (:side @order-ref)

@@ -43,7 +43,7 @@
              (insert-order order-book order)
              (is (= 1 (market-depth order-book :bid price))) )
     (testing "Delete order from book"
-             (remove-order order-book order)
+             (remove-order-ref order-book order)
              (is (= 0 (market-depth order-book :bid price))))))
 
 
@@ -62,11 +62,11 @@
              (insert-order order-book order-2)
              (is (= 2 (count @(:market-bid order-book)))))
     (testing "Delete first market order from book"
-             (remove-order order-book order-1)
+             (remove-order-ref order-book order-1)
              (is (= 1 (count @(:market-bid order-book)))) )
     (testing "Delete all market orders from book (including a non-existing)"
-             (remove-order order-book order-1)
-             (remove-order order-book order-2)
+             (remove-order-ref order-book order-1)
+             (remove-order-ref order-book order-2)
              (is (= 0 (count @(:market-bid order-book)))) )))
 
 

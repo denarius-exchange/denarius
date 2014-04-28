@@ -98,6 +98,23 @@
                                                       (enqueue channel
                                                                (json/write-str {:msg-type tcp/message-response-trades
                                                                                 :trades trades} ))))
+                       tcp/message-request-cancel (if-let [broker-orders (db-orders/query-orders broker-id)]
+                                                    (if-let [order       (broker-orders (:order-id req-map))]
+                                                      (let [order-id   (:order-id req-map)
+                                                            order-type (:type  @order)
+                                                            side       (:side  @order)
+                                                            price      (:price @order)
+                                                            req        {:req-type tcp/message-request-cancel
+                                                                        :broker-id broker-id
+                                                                        :order-id order-id
+                                                                        :order-type (condp = order-type
+                                                                                      :market "market"
+                                                                                      :limit "limit")
+                                                                        :side side
+                                                                        :price price}
+                                                            req-str (json/write-str req)]
+                                                        (println "CANCEL" req)
+                                                        (enqueue engine-chnl req-str))))
                        )
                      (let [ch-broker (@channels broker-id)]
                        (if ch-broker

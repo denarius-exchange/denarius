@@ -59,12 +59,10 @@
                                              ; We unlock the matching loop
                                              (async/go (async/>! @async-channel 1)) ; duplicate??
                                              (async/go (async/>! @async-channel 1)) )
-                     message-request-cancel (let [order-ref  (create-order-ref order-id broker-id
-                                                                               order-type side size price
-                                                                               nil nil)]
-                                              ; We need to create a new order ref to recover the one in the book,
-                                              ; this is horrible.
-                                              (denarius.engine/remove-order order-ref)))
+                     message-request-cancel (do
+                                              (println "CANCEL "  broker-id order-id order-type side price)
+                                              (remove-order @book broker-id order-id order-type side price))
+                     )
                    ; return response 
                    (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
 

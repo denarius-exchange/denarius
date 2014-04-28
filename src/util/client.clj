@@ -174,8 +174,10 @@
     (dosync (alter orders conj order-map))
     (enqueue channel order-str) ))
 
-(defn cancel [id]
-  nil)
+(defn cancel [channel broker-id order-id]
+  (let [order-map  {:req-type tcp/message-request-cancel :broker-id broker-id :order-id order-id}
+        order-str  (json/write-str order-map)]
+    (enqueue channel order-str)))
 
 (defn list-orders [channel broker-id]
   (let [req-map {:req-type tcp/message-request-list :broker-id broker-id}
@@ -213,7 +215,7 @@
             "help"     (show-commands (second line))
             "start"    (start (Integer/parseInt (second line)))
             "send"     (send-order channel broker-id order-id opt)
-            "cancel"   (cancel (second line))
+            "cancel"   (cancel channel broker-id (Integer/parseInt (second line)))
             "position" (println "CURRENT NET POSITION: " @position)
             "history"  (print-history @orders)
             "list"     (list-orders channel broker-id)
