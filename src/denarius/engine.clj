@@ -108,14 +108,14 @@
     (if level-ref
       (do
         (println "CANCEL 2")
-        (dosync (alter level-ref #(remove pred %))) true ))))
+        (dosync (alter level-ref #(-> (remove pred %) vec))) true ))))
 
 (defmethod remove-order :market [^Book book broker-id order-id type side price]
   "Remove an order from the book specified as argument"
   (let [side-ref  (order-market-side book side)
         pred      #(= (:order-id @%) order-id)]
     (println "CANCEL 2")
-    (dosync (alter side-ref #(remove pred %))) true ))
+    (dosync (alter side-ref #(-> (remove pred %) vec))) true ))
 
 
 (defmulti remove-order-ref order-type-dispatch)
