@@ -37,26 +37,33 @@
 
 (defn build-position [data]
   (let [order-map   (json/read-str data :key-fn keyword)
-        msg-type    (:msg-type    order-map)
-        broker-id-1 (:broker-id-1 order-map)
-        order-id-1  (:order-id-1  order-map)
-        broker-id-2 (:broker-id-2 order-map)
-        order-id-2  (:order-id-2  order-map)
-        size        (:size        order-map)
-        price       (:price       order-map)
-        ch-brkr     (@channels broker-id-1)]
-    (condp msg-type
-           tcp/message-response-executed
-      (do
-        (if ch-brkr
-          (do
-            (db-trades/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
-            (db-orders/decrease-size broker-id-1 order-id-1 size)
-            (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
-                                              :broker-id broker-id-1
-                                              :order-id order-id-1 :size size
-                                              :price price}) ) ))
-        ))))
+        msg-type    (:msg-type order-map)]
+    (println order-map msg-type)
+    (condp = msg-type
+      tcp/message-response-executed (let [broker-id-1 (:broker-id-1 order-map)
+                                          order-id-1  (:order-id-1  order-map)
+                                          broker-id-2 (:broker-id-2 order-map)
+                                          order-id-2  (:order-id-2  order-map)
+                                          size        (:size        order-map)
+                                          price       (:price       order-map)]
+                                      (if-let [ch-brkr (@channels broker-id-1)]
+                                        (do
+                                          (db-trades/insert-trade broker-id-1 order-id-1 broker-id-2 order-id-2 size price)
+                                          (db-orders/decrease-size broker-id-1 order-id-1 size)
+                                          (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-executed
+                                                                            :broker-id broker-id-1
+                                                                            :order-id order-id-1 :size size
+                                                                            :price price}) ))
+                                        ))
+      tcp/message-response-cancel   (let [broker-id (:broker-id order-map)
+                                          order-id  (:order-id  order-map)]
+                                      (if-let [ch-brkr (@channels broker-id)]
+                                        (do
+                                          (println "CANCELBACK!")
+                                          (db-orders/remove-order broker-id order-id)
+                                          (enqueue ch-brkr (json/write-str {:msg-type tcp/message-response-cancel
+                                                                            :order-id order-id}) ))
+                                        )))))
 
 
 (defn create-handler [e-host e-port engine-chnl]

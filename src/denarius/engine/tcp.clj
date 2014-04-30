@@ -30,6 +30,7 @@
     (if-not (nil? channel)
       (enqueue channel
                (json/json-str {:msg-type  message-response-cancel
+                               :broker-id (:broker-id @order-ref)
                                :order-id  (:order-id  @order-ref)})) )))
 
 (defn handler [channel channel-info]
@@ -63,7 +64,8 @@
                                               (remove-order @book broker-id order-id order-type side price))
                      )
                    ; return response 
-                   (enqueue channel (json/write-str {:msg-type 0 :status :OK})) ))))
+                   ; +++++++(enqueue channel (json/write-str {:msg-type 0 :status :OK}))
+                   ))))
 
 
 (defn start-tcp [order-book port async-ch]

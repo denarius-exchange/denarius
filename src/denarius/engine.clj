@@ -97,6 +97,15 @@
       (alter side-ref #(conj % order-ref)) )))
 
 
+(defn remove-function [order-ref]
+  "Function called on order cancel. Callbacks added to the vector
+   :on-cancel will be called."
+  ; first make changes persistent. If impossible, return false
+  (future
+    (let [more (:on-cancel (meta @order-ref))]
+      (doall (map #(% order-ref) more)) ))
+  ; return true on no error
+  true)
 
 (defmulti remove-order (fn [_ _ _ type _ _] type))
 
@@ -104,17 +113,14 @@
   "Remove an order from the book specified as argument"
   (let [side-ref  (side book)
         level-ref (@side-ref price)
-        pred      #(= (:order-id @%) order-id)]
+        pred      #(and (= (:order-id @%) order-id) (remove-function %))]
     (if level-ref
-      (do
-        (println "CANCEL 2")
-        (dosync (alter level-ref #(-> (remove pred %) vec))) true ))))
+      (dosync (alter level-ref #(-> (remove pred %) vec))) true )))
 
 (defmethod remove-order :market [^Book book broker-id order-id type side price]
   "Remove an order from the book specified as argument"
   (let [side-ref  (order-market-side book side)
-        pred      #(= (:order-id @%) order-id)]
-    (println "CANCEL 2")
+        pred      #(and (= (:order-id @%) order-id) (remove-function %))]
     (dosync (alter side-ref #(-> (remove pred %) vec))) true ))
 
 
