@@ -29,7 +29,7 @@
   (fn [order-ref]
     (if-not (nil? channel)
       (enqueue channel
-               (json/json-str {:msg-type    message-response-cancel
+               (json/json-str {:msg-type  message-response-cancel
                                :order-id  (:order-id  @order-ref)})) )))
 
 (defn handler [channel channel-info]
@@ -60,7 +60,6 @@
                                              (async/go (async/>! @async-channel 1)) ; duplicate??
                                              (async/go (async/>! @async-channel 1)) )
                      message-request-cancel (do
-                                              (println "CANCEL "  broker-id order-id order-type side price)
                                               (remove-order @book broker-id order-id order-type side price))
                      )
                    ; return response 
