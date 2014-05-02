@@ -12,25 +12,28 @@
 
 (def book (ref nil))
 (def async-channel (ref nil))
+(def broker-channels (atom {}))
 
-(defn inform-match [channel]
-  (fn [order-ref-1 order-ref-2 size price]
+(defn inform-match [order-ref-1 order-ref-2 size price]
+  (let [broker-id (:broker-id @order-ref-1)
+        channel   (@broker-channels broker-id)]
     (if-not (nil? channel)
-      (enqueue channel 
+      (enqueue channel
                (json/json-str {:msg-type    message-response-executed
                                :order-id-1  (:order-id  @order-ref-1)
-                               :broker-id-1 (:broker-id @order-ref-1)
+                               :broker-id-1 broker-id
                                :order-id-2  (:order-id  @order-ref-2)
                                :broker-id-2 (:broker-id @order-ref-2)
                                :size        size
                                :price       price})) )))
 
-(defn inform-cancel [channel]
-  (fn [order-ref]
+(defn inform-cancel [order-ref]
+  (let [broker-id (:broker-id @order-ref)
+        channel   (@broker-channels broker-id)]
     (if-not (nil? channel)
       (enqueue channel
                (json/json-str {:msg-type  message-response-cancel
-                               :broker-id (:broker-id @order-ref)
+                               :broker-id broker-id
                                :order-id  (:order-id  @order-ref)})) )))
 
 (defn handler [channel channel-info]
@@ -54,8 +57,9 @@
                    (condp = req-type
                      message-request-order (let [order-ref  (create-order-ref order-id broker-id
                                                                               order-type side size price
-                                                                              [(inform-cancel channel)]
-                                                                              [(inform-match channel)])]
+                                                                              [inform-cancel]
+                                                                              [inform-match])]
+                                             (swap! broker-channels assoc broker-id channel)
                                              (insert-order @book order-ref)
                                              ; We unlock the matching loop
                                              (async/go (async/>! @async-channel 1)) ; duplicate??
