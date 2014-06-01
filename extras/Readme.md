@@ -19,10 +19,11 @@ will work out of the box.
 
 When planning to move to zjmq, you need to know that it needs the native ZeroMQ libraries present on your system.
 Please follow the guides in [ZeroMQ website](http://zeromq.org). As a summary, you need to perform the following:
-1.   Install ZeroMQ libraries on your system (e.g., /usr/lib on Linux)
-2.   Install zjmq libraries on your system (e.g., /usr/lib on Linux)
-3.   In the ```project.clj``` file, remove comment the code ```:exclusions [org.zeromq/jzmq]```, which will
-     force cljzmq to work with zjmq.
+
+1. Install ZeroMQ libraries on your system (e.g., /usr/lib on Linux)
+2. Install zjmq libraries on your system (e.g., /usr/lib on Linux)
+3. In the ```project.clj``` file, remove comment the code ```:exclusions [org.zeromq/jzmq]```, which will
+force cljzmq to work with zjmq.
 
 ### Windows troubleshooting
 
