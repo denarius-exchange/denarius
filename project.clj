@@ -12,5 +12,8 @@
                  [aleph "0.3.0"]
                  [org.clojure/tools.cli "0.3.1"]
                  [sonian/carica "1.0.4" :exclusions [[cheshire]]]
+                 [org.zeromq/jeromq "0.3.3"]    ;; Remove if using the faster JNI version jzmq. See Wiki/Readme.md
+                 [org.zeromq/cljzmq "0.1.4" :exclusions [org.zeromq/jzmq]]
                  [mysql/mysql-connector-java "5.1.25"]]
+  :jvm-opts ["-Djava.library.path=lib/"]
   :main denarius.core)
